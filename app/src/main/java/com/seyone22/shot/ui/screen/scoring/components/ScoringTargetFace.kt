@@ -11,7 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.seyone22.shot.ui.theme.ArcheryColors
 
@@ -21,6 +23,8 @@ fun ScoringTargetFace(
     hits: List<Offset>, // <-- NEW PARAMETER: List of points to draw
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     // We use M3's outlineVariant color for the markers to ensure contrast across themes
     val markerColor = MaterialTheme.colorScheme.outlineVariant
 
@@ -35,6 +39,7 @@ fun ScoringTargetFace(
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         onTargetTap(offset, targetRadius)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 }
         ) {

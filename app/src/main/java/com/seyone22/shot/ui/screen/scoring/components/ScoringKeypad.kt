@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.seyone22.shot.ui.theme.ArcheryColors
@@ -20,6 +22,8 @@ fun ScoringKeypad(
     onNextEnd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -63,8 +67,13 @@ fun ScoringKeypad(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = onBackspace,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = {
+                        onBackspace()
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(0.dp)
@@ -72,8 +81,13 @@ fun ScoringKeypad(
                     Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Backspace", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
-                    onClick = onNextEnd,
-                    modifier = Modifier.fillMaxWidth().weight(2f), // Spans two rows
+                    onClick = {
+                        onNextEnd()
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(2f), // Spans two rows
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(0.dp)
@@ -103,9 +117,17 @@ private fun ColumnScope.ScoreButton(
     isX: Boolean,
     onInput: (String, Int, Boolean) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Button(
-        onClick = { onInput(label, score, isX) },
-        modifier = Modifier.fillMaxWidth().weight(1f),
+        onClick = {
+            onInput(label, score, isX)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f),
         colors = ButtonDefaults.buttonColors(containerColor = bgColor, contentColor = textColor),
         shape = RoundedCornerShape(12.dp),
         border = if (bgColor == ArcheryColors.White) BorderStroke(1.dp, Color.LightGray) else null,

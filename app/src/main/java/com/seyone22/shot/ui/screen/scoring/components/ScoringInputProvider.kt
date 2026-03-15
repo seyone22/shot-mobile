@@ -21,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.seyone22.shot.data.local.entity.InputMethod
 import com.seyone22.shot.ui.screens.scoring.ScoringUiState
@@ -35,6 +37,8 @@ fun ScoringInputProvider(
     onNextEnd: () -> Unit,
     state: ScoringUiState
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -60,11 +64,17 @@ fun ScoringInputProvider(
                         Spacer(modifier = Modifier.height(16.dp))
                         // Control buttons for Target mode
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilledTonalButton(onClick = onBackspace, modifier = Modifier.weight(1f)) {
+                            FilledTonalButton(onClick = {
+                                onBackspace()
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.AutoMirrored.Filled.Backspace, null)
                                 Text(" Undo")
                             }
-                            Button(onClick = onNextEnd, modifier = Modifier.weight(1f)) {
+                            Button(onClick = {
+                                onNextEnd()
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }, modifier = Modifier.weight(1f)) {
                                 Text("Next End")
                             }
                         }
