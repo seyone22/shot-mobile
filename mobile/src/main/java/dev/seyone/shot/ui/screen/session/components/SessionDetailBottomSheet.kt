@@ -28,7 +28,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import dev.seyone.shot.data.local.entity.SessionEntity
-import dev.seyone.shot.ui.screens.session.SessionSummaryData
+import dev.seyone.shot.ui.screen.session.SessionSummaryData
 import dev.seyone.shot.ui.theme.ArcheryColors
 import java.text.SimpleDateFormat
 import java.util.Date
