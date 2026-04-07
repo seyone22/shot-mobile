@@ -36,4 +36,8 @@ interface ScoringDao {
     @Transaction
     @Query("SELECT * FROM ends WHERE sessionId = :sessionId ORDER BY sequenceOrder ASC")
     fun getEndsWithArrowsForSession(sessionId: Long): Flow<List<EndWithArrows>>
+
+    @Transaction
+    @Query("SELECT * FROM ends WHERE sessionId = :sessionId") // Adjust table name if necessary
+    suspend fun getEndsWithArrowsForSessionSync(sessionId: Long): List<EndWithArrows>
 }

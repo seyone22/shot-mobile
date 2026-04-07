@@ -13,4 +13,9 @@ interface ScoringRepository {
     suspend fun insertArrows(arrows: List<ArrowEntity>)
     suspend fun deleteEnd(end: EndEntity)
     suspend fun deleteArrow(arrow: ArrowEntity)
+
+    /**
+     * Fetches all arrows for a session as a one-shot synchronous query.
+     */
+    suspend fun getAllArrowsForSessionSync(sessionId: Long): List<ArrowEntity>
 }

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +26,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.seyone22.shot.data.local.entity.SessionEntity
 import com.seyone22.shot.ui.screens.session.SessionSummaryData
 import com.seyone22.shot.ui.theme.ArcheryColors
@@ -182,60 +191,32 @@ private fun MetricItem(label: String, value: String, valueColor: Color = Materia
 }
 
 // --- Native Canvas Line Chart ---
+
 @Composable
 fun EndScoreLineChart(scores: List<Int>, modifier: Modifier = Modifier) {
-    val lineColor = MaterialTheme.colorScheme.primary
-    val dotColor = MaterialTheme.colorScheme.onSurface
+    if (scores.size < 2) return
 
-    Canvas(modifier = modifier.padding(vertical = 16.dp, horizontal = 8.dp)) {
-        if (scores.size < 2) return@Canvas // Need at least 2 points to draw a line
+    val modelProducer = remember { CartesianChartModelProducer() }
 
-        val maxScore = scores.maxOrNull()?.toFloat() ?: 1f
-        val minScore = scores.minOrNull()?.toFloat() ?: 0f
-
-        // Add some padding to Y axis so the line doesn't hit the absolute top/bottom
-        val yRange = (maxScore - minScore).coerceAtLeast(1f)
-        val paddingY = yRange * 0.2f
-        val actualMax = maxScore + paddingY
-        val actualMin = (minScore - paddingY).coerceAtLeast(0f)
-        val actualRange = actualMax - actualMin
-
-        val widthPerStep = size.width / (scores.size - 1)
-
-        val path = Path()
-        val points = mutableListOf<Offset>()
-
-        scores.dropLastWhile { it == 0 }.forEachIndexed { index, score ->
-            val x = index * widthPerStep
-            // Calculate Y position (invert because Y=0 is the top of the canvas)
-            val y = size.height - ((score - actualMin) / actualRange * size.height)
-            val offset = Offset(x, y)
-            points.add(offset)
-
-            if (index == 0) path.moveTo(offset.x, offset.y)
-            else path.lineTo(offset.x, offset.y)
-        }
-
-        // Draw the connecting line
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(
-                width = 4.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-
-        // Draw the dots on top
-        points.forEach { point ->
-            drawCircle(
-                color = dotColor,
-                radius = 5.dp.toPx(),
-                center = point
-            )
+    // LaunchedEffect reacts to changes in the 'scores' list
+    LaunchedEffect(scores) {
+        modelProducer.runTransaction {
+            lineSeries {
+                // Pass your dynamic list directly into the series
+                series(scores)
+            }
         }
     }
+
+    CartesianChartHost(
+        chart = rememberCartesianChart(
+            rememberLineCartesianLayer(),
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(),
+        ),
+        modelProducer = modelProducer,
+        modifier = modifier
+    )
 }
 
 private fun formatDate(timestamp: Long): String {

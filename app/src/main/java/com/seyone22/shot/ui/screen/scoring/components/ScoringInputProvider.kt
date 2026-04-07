@@ -71,7 +71,7 @@ fun ScoringInputProvider(
                                 Icon(Icons.AutoMirrored.Filled.Backspace, null)
                                 Text(" Undo")
                             }
-                            Button(onClick = {
+                            Button(onClick =  {
                                 onNextEnd()
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             }, modifier = Modifier.weight(1f)) {

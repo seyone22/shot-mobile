@@ -28,6 +28,8 @@ import java.util.Locale
 fun SessionItemCard(
     session: SessionEntity,
     roundName: String, // Pass the resolved name here
+    totalScore: Int,   // <-- ADDED
+    average: Float,    // <-- ADDED
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -118,12 +120,12 @@ fun SessionItemCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "--", // TODO: Wire up actual total score
+                        text = totalScore.toString(), // <-- UPDATED
                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Avg: --", // TODO: Wire up actual AAV
+                        text = "Avg: ${String.format(Locale.getDefault(), "%.1f", average)}", // <-- UPDATED
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )

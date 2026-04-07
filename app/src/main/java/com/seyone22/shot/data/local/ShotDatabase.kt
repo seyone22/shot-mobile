@@ -5,21 +5,42 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.seyone22.shot.data.local.dao.ArcherDao
+import com.seyone22.shot.data.local.dao.ArrowSetDao
+import com.seyone22.shot.data.local.dao.BowComponentDao
+import com.seyone22.shot.data.local.dao.BowProfileDao
+import com.seyone22.shot.data.local.dao.LocationDao
 import com.seyone22.shot.data.local.dao.RoundDao
 import com.seyone22.shot.data.local.dao.ScoringDao
 import com.seyone22.shot.data.local.dao.SessionDao
 import com.seyone22.shot.data.local.entity.ArcherEntity
 import com.seyone22.shot.data.local.entity.ArrowEntity
+import com.seyone22.shot.data.local.entity.ArrowSetEntity
+import com.seyone22.shot.data.local.entity.BowComponentEntity
+import com.seyone22.shot.data.local.entity.BowProfileEntity
 import com.seyone22.shot.data.local.entity.DistanceEntity
 import com.seyone22.shot.data.local.entity.EndEntity
+import com.seyone22.shot.data.local.entity.LocationEntity
 import com.seyone22.shot.data.local.entity.RoundEntity
 import com.seyone22.shot.data.local.entity.SessionEntity
 import com.seyone22.shot.data.local.entity.ShotTypeConverters
 
 @Database(
-    entities = [SessionEntity::class, RoundEntity::class, DistanceEntity::class, EndEntity::class, ArrowEntity::class, ArcherEntity::class],
-    version = 5, // Bumped to 2 since we altered RoundEntity's schema
+    entities = [
+        SessionEntity::class,
+        RoundEntity::class,
+        DistanceEntity::class,
+        EndEntity::class,
+        ArrowEntity::class,
+        ArcherEntity::class,
+        LocationEntity::class,
+        BowProfileEntity::class,
+        ArrowSetEntity::class,
+        BowComponentEntity::class   // <-- ADDED
+    ],
+    version = 7, // <-- Bumped to 7
     exportSchema = false
 )
 @TypeConverters(ShotTypeConverters::class)
@@ -29,16 +50,88 @@ abstract class ShotDatabase : RoomDatabase() {
     abstract fun roundDao(): RoundDao
     abstract fun scoringDao(): ScoringDao
     abstract fun archerDao(): ArcherDao
+    abstract fun locationDao(): LocationDao
+    abstract fun bowProfileDao(): BowProfileDao
+    abstract fun arrowSetDao(): ArrowSetDao
+    abstract fun bowComponentDao(): BowComponentDao // <-- ADDED
 
     companion object {
         @Volatile
         private var Instance: ShotDatabase? = null
 
+        // --- MIGRATION 5 to 6 ---
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create Locations Table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `locations` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `type` TEXT NOT NULL, 
+                        `isDefault` INTEGER NOT NULL, 
+                        `notes` TEXT NOT NULL
+                    )
+                """.trimIndent())
+
+                // Create Bow Profiles Table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `bow_profiles` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `bowType` TEXT NOT NULL, 
+                        `drawWeight` REAL, 
+                        `drawLength` REAL, 
+                        `isDefault` INTEGER NOT NULL, 
+                        `notes` TEXT NOT NULL
+                    )
+                """.trimIndent())
+
+                // Create Arrow Sets Table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `arrow_sets` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `name` TEXT NOT NULL, 
+                        `manufacturer` TEXT NOT NULL, 
+                        `model` TEXT NOT NULL, 
+                        `spine` INTEGER, 
+                        `weight` REAL, 
+                        `quantity` INTEGER NOT NULL, 
+                        `isDefault` INTEGER NOT NULL, 
+                        `notes` TEXT NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // --- MIGRATION 6 to 7 ---
+        // Creates the new table for Bow Components with Foreign Key relation to Bow Profiles
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create Bow Components Table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `bow_components` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                        `bowProfileId` INTEGER NOT NULL, 
+                        `category` TEXT NOT NULL, 
+                        `brand` TEXT NOT NULL, 
+                        `model` TEXT NOT NULL, 
+                        `price` REAL, 
+                        `notes` TEXT NOT NULL,
+                        FOREIGN KEY(`bowProfileId`) REFERENCES `bow_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+
+                // Create Index for the Foreign Key (Crucial for Room performance)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_bow_components_bowProfileId` ON `bow_components` (`bowProfileId`)")
+            }
+        }
+
         fun getDatabase(context: Context): ShotDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, ShotDatabase::class.java, "shot_database")
                     .addCallback(DatabasePrepopulateCallback())
-                    .fallbackToDestructiveMigration(true) // Remember: Wipes DB if version changes
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7) // <-- Added MIGRATION_6_7 here
+                    .fallbackToDestructiveMigration(false)
                     .build().also { Instance = it }
             }
         }

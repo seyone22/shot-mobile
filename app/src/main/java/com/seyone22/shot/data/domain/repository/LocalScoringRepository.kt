@@ -32,4 +32,9 @@ class LocalScoringRepository(
     override suspend fun deleteEnd(end: EndEntity) = scoringDao.deleteEnd(end)
 
     override suspend fun deleteArrow(arrow: ArrowEntity) = scoringDao.deleteArrow(arrow)
+
+    override suspend fun getAllArrowsForSessionSync(sessionId: Long): List<ArrowEntity> {
+        // Fetch the ends synchronously, then flatMap them to extract just the arrows
+        return scoringDao.getEndsWithArrowsForSessionSync(sessionId).flatMap { it.arrows }
+    }
 }

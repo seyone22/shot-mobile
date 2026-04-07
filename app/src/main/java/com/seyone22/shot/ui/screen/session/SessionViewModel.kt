@@ -11,10 +11,13 @@ import com.seyone22.shot.data.local.entity.RoundWithDistances
 import com.seyone22.shot.data.local.entity.SessionEntity
 import com.seyone22.shot.data.local.entity.SessionType
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -34,11 +37,51 @@ class SessionViewModel(
     private val roundRepository: RoundRepository,
     private val scoringRepository: ScoringRepository // <-- ADDED
 ) : ViewModel() {
+    // --- Search & Filter State ---
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
 
-    val sessionList: StateFlow<List<SessionEntity>> = sessionRepository.getAllSessionsStream()
+    private val _selectedFilter = MutableStateFlow<SessionType?>(null) // null means "All"
+    val selectedFilter = _selectedFilter.asStateFlow()
+
+    // Base flows (Keep these private if the UI doesn't need the raw un-filtered list)
+    private val baseSessionList = sessionRepository.getAllSessionsStream()
+    val availableRounds = roundRepository.getAllRoundsStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
-    val availableRounds: StateFlow<List<RoundWithDistances>> = roundRepository.getAllRoundsStream()
+    // --- The Filtered List for the UI ---
+    val filteredSessionList = combine(
+        baseSessionList,
+        availableRounds,
+        _searchQuery,
+        _selectedFilter
+    ) { sessions, rounds, query, filter ->
+        sessions.filter { session ->
+            // 1. Check Filter matches
+            val matchesFilter = filter == null || session.sessionType == filter
+
+            // 2. Check Search matches (searching by Round Name or Notes)
+            val roundName = rounds.find { it.round.id == session.roundId }?.round?.name ?: ""
+            val matchesSearch = query.isBlank() ||
+                    roundName.contains(query, ignoreCase = true) ||
+                    session.notes.contains(query, ignoreCase = true)
+
+            // Keep session only if it matches BOTH conditions
+            matchesFilter && matchesSearch
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+
+    // --- UI Actions ---
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun updateFilter(filter: SessionType?) {
+        _selectedFilter.value = filter
+    }
+
+
+    val sessionList: StateFlow<List<SessionEntity>> = sessionRepository.getAllSessionsStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     // --- Summary State ---
@@ -105,6 +148,16 @@ class SessionViewModel(
         viewModelScope.launch {
             // Copy the existing session with the new notes string and update the DB
             sessionRepository.updateSession(session.copy(notes = newNotes))
+        }
+    }
+
+    fun getSessionStats(sessionId: Long): Flow<Pair<Int, Float>> {
+        return scoringRepository.getEndsWithArrowsForSession(sessionId).map { endsWithArrows ->
+            val allArrows = endsWithArrows.flatMap { it.arrows }
+            val total = allArrows.sumOf { it.scoreValue }
+            val avg = if (allArrows.isNotEmpty()) total.toFloat() / allArrows.size else 0f
+
+            Pair(total, avg)
         }
     }
 

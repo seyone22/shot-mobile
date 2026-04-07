@@ -67,6 +67,7 @@ dependencies {
     // Extended Icons (Useful for archery target/scoring iconography without needing custom SVGs yet)
     implementation("androidx.compose.material:material-icons-extended")
 
+    implementation(libs.vico.compose.m3)
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

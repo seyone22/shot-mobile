@@ -1,6 +1,5 @@
 package com.seyone22.shot
 
-import com.seyone22.shot.ui.screen.more.ArchersListScreen
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -33,25 +32,28 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.seyone22.shot.di.AppContainer
 import com.seyone22.shot.ui.screen.more.AboutScreen
+import com.seyone22.shot.ui.screen.more.ArchersListScreen
+import com.seyone22.shot.ui.screen.more.BowEquipmentScreen
 import com.seyone22.shot.ui.screen.more.MoreScreen
+import com.seyone22.shot.ui.screen.more.bow.BowDetailScreen
 import com.seyone22.shot.ui.screen.scoring.ScoringScreen
 import com.seyone22.shot.ui.screen.session.SessionScreen
+import com.seyone22.shot.ui.screen.statistics.StatisticsScreen
 import com.seyone22.shot.ui.theme.ShotTheme
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Retrieve the manual DI container from the Application class
         val appContainer = (application as ShotApplication).container
-
         enableEdgeToEdge()
         setContent {
             ShotTheme {
@@ -64,15 +66,14 @@ class MainActivity : ComponentActivity() {
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun ShotApp(
-    appContainer: AppContainer, navController: NavHostController = rememberNavController()
+    appContainer: AppContainer,
+    navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // 1. Check if the user is currently on a main tab
+    // Logic to hide BottomBar/NavRail on sub-screens
     val isTopLevel = TopLevelDestination.entries.any { it.route == currentDestination?.route }
-
-    // 2. Dynamically hide the navigation suite if they are scoring
     val layoutType = if (isTopLevel) {
         NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
     } else {
@@ -80,22 +81,14 @@ fun ShotApp(
     }
 
     NavigationSuiteScaffold(
-        layoutType = layoutType, // Apply the dynamic layout type here
+        layoutType = layoutType,
         navigationSuiteItems = {
             TopLevelDestination.entries.forEach { destination ->
-                val isSelected = currentDestination?.hierarchy?.any {
-                    it.route == destination.route
-                } == true
-
+                val isSelected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
                 item(
                     icon = {
                         Icon(
-                            // --- DYNAMIC ICON LOGIC ---
-                            imageVector = if (isSelected) {
-                                destination.selectedIcon
-                            } else {
-                                destination.unselectedIcon
-                            },
+                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
                             contentDescription = destination.label
                         )
                     },
@@ -103,53 +96,31 @@ fun ShotApp(
                     selected = isSelected,
                     onClick = {
                         navController.navigate(destination.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     }
                 )
             }
-        }) {
+        }
+    ) {
         NavHost(
             navController = navController,
             startDestination = TopLevelDestination.SESSION.route,
             modifier = Modifier.fillMaxSize()
         ) {
+            // --- TOP LEVEL DESTINATIONS ---
             composable(TopLevelDestination.SESSION.route) {
-                SessionScreen(
-                    sessionRepository = appContainer.sessionRepository,
-                    roundRepository = appContainer.roundRepository,
-                    scoringRepository = appContainer.scoringRepository,
-                    onNavigateToScoring = { sessionId ->
-                        navController.navigate("scoring_stub/$sessionId")
-                    })
-            }
-
-            composable("about") {
-                AboutScreen(onNavigateBack = { navController.popBackStack() })
-            }
-
-            composable("scoring_stub/{sessionId}") { backStackEntry ->
-                val sessionId =
-                    backStackEntry.arguments?.getString("sessionId")?.toLongOrNull() ?: -1L
-
-                ScoringScreen(
-                    sessionId = sessionId,
-                    scoringRepository = appContainer.scoringRepository,
-                    sessionRepository = appContainer.sessionRepository,
-                    roundRepository = appContainer.roundRepository, // <-- Pass it here!
-                    onNavigateBack = { navController.popBackStack() })
+                SessionScreen(onNavigateToScoring = { id -> navController.navigate("scoring/$id") })
             }
 
             composable(TopLevelDestination.SOCIAL.route) {
-                PlaceholderScreen("Social Screen")
+                PlaceholderScreen("Social Feed")
             }
 
             composable(TopLevelDestination.STATISTICS.route) {
-                PlaceholderScreen("Statistics Screen")
+                StatisticsScreen()
             }
 
             composable(TopLevelDestination.MORE.route) {
@@ -162,9 +133,54 @@ fun ShotApp(
                 )
             }
 
-// Sub-screens
-            composable("manage_archers") { ArchersListScreen(onNavigateBack = { navController.popBackStack() }, archerRepository = appContainer.archerRepository) }
-// ... and so on
+            // --- SCORING FLOW ---
+            composable(
+                route = "scoring/{sessionId}",
+                arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: -1L
+                ScoringScreen(
+                    sessionId = sessionId,
+                    scoringRepository = appContainer.scoringRepository,
+                    sessionRepository = appContainer.sessionRepository,
+                    roundRepository = appContainer.roundRepository,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // --- EQUIPMENT & MANAGEMENT SUB-SCREENS ---
+            composable("manage_bows") {
+                BowEquipmentScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToBowDetail = { id -> navController.navigate("bow_detail/$id") }
+                )
+            }
+
+            composable(
+                route = "bow_detail/{bowId}",
+                arguments = listOf(navArgument("bowId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val bowId = backStackEntry.arguments?.getLong("bowId") ?: return@composable
+                BowDetailScreen(
+                    bowId = bowId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToEditBow = { id ->
+                        // Logic for navigating to an Edit Screen would go here
+                        navController.navigate("manage_bows")
+                    }
+                )
+            }
+
+            composable("manage_archers") {
+                ArchersListScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    archerRepository = appContainer.archerRepository
+                )
+            }
+
+            composable("manage_arrows") { PlaceholderScreen("Manage Arrows") }
+            composable("manage_locations") { PlaceholderScreen("Manage Locations") }
+
             composable("about") {
                 AboutScreen(onNavigateBack = { navController.popBackStack() })
             }
@@ -178,33 +194,12 @@ enum class TopLevelDestination(
     val unselectedIcon: ImageVector,
     val route: String
 ) {
-    SESSION(
-        label = "Session",
-        selectedIcon = Icons.Filled.TrackChanges, // Better "Target" feel
-        unselectedIcon = Icons.Outlined.TrackChanges,
-        route = "session"
-    ),
-    SOCIAL(
-        label = "Social",
-        selectedIcon = Icons.Filled.People,
-        unselectedIcon = Icons.Outlined.People,
-        route = "social"
-    ),
-    STATISTICS(
-        label = "Statistics",
-        selectedIcon = Icons.Filled.BarChart,
-        unselectedIcon = Icons.Outlined.BarChart,
-        route = "statistics"
-    ),
-    MORE(
-        label = "More",
-        selectedIcon = Icons.Filled.MoreHoriz,
-        unselectedIcon = Icons.Outlined.MoreHoriz,
-        route = "more"
-    )
+    SESSION("Session", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges, "session"),
+    SOCIAL("Social", Icons.Filled.People, Icons.Outlined.People, "social"),
+    STATISTICS("Statistics", Icons.Filled.BarChart, Icons.Outlined.BarChart, "statistics"),
+    MORE("More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz, "more")
 }
 
-// A temporary composable to visually verify navigation is working
 @Composable
 fun PlaceholderScreen(title: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

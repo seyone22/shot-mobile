@@ -6,25 +6,31 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,6 +52,8 @@ import com.seyone22.shot.data.domain.repository.RoundRepository
 import com.seyone22.shot.data.domain.repository.ScoringRepository
 import com.seyone22.shot.data.domain.repository.SessionRepository
 import com.seyone22.shot.data.local.entity.SessionEntity
+import com.seyone22.shot.data.local.entity.SessionType
+import com.seyone22.shot.di.AppViewModelProvider
 import com.seyone22.shot.ui.screen.session.components.NewSessionDialog
 import com.seyone22.shot.ui.screen.session.components.SessionItemCard
 import com.seyone22.shot.ui.screen.session.components.SessionNotesDialog
@@ -55,51 +63,117 @@ import com.seyone22.shot.ui.screens.session.SessionViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionScreen(
-    sessionRepository: SessionRepository,
-    roundRepository: RoundRepository,
-    scoringRepository: ScoringRepository, // <-- ADDED
+    modifier: Modifier = Modifier,
+    viewModel: SessionViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onNavigateToScoring: (Long) -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    // Initialize ViewModel using our manual DI factory, now with both repositories
-    val viewModel: SessionViewModel = viewModel(
-        factory = SessionViewModel.Factory(sessionRepository, roundRepository, scoringRepository)
-    )
-    val sessions by viewModel.sessionList.collectAsState()
-    val availableRounds by viewModel.availableRounds.collectAsState() // Observe real rounds!
-    val summaryData by viewModel.sessionSummary.collectAsState() // <-- OBSERVE NEW STATE
+    val sessions by viewModel.filteredSessionList.collectAsState()
+    val availableRounds by viewModel.availableRounds.collectAsState()
+    val summaryData by viewModel.sessionSummary.collectAsState()
+
+    // Search State
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+
+    // Filter State
+    var showFilterMenu by remember { mutableStateOf(false) }
+    val selectedFilter by viewModel.selectedFilter.collectAsState()
 
     // Scroll behavior for the collapsing TopAppBar
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
-    // State to handle the Bottom Sheet visibility
+    // Bottom Sheet & Dialog States
     var showNewSessionSheet by rememberSaveable { mutableStateOf(false) }
-
-    // State to handle the "Summary" Bottom Sheet visibility
     var selectedSessionForSummary by remember { mutableStateOf<SessionEntity?>(null) }
-
-    var showNotesDialogFor by remember { mutableStateOf<SessionEntity?>(null) } // <--- ADD THIS
-
+    var showNotesDialogFor by remember { mutableStateOf<SessionEntity?>(null) }
     var sessionToDelete by remember { mutableStateOf<SessionEntity?>(null) }
 
     Scaffold(modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection), topBar = {
-        TopAppBar(
-            title = { Text("Sessions") }, actions = {
-                IconButton(onClick = { /* TODO: Implement Search */ }) {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+        if (isSearchActive) {
+            // --- MATERIAL 3 SEARCH BAR ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                @Suppress("DEPRECATION") SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.updateSearchQuery(it) },
+                    onSearch = { /* Execute search / Hide keyboard if needed */ },
+                    active = false, // Kept false so it acts as a floating bar instead of taking over the screen
+                    onActiveChange = { },
+                    placeholder = { Text("Search rounds or notes...") },
+                    leadingIcon = {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            viewModel.updateSearchQuery("") // Clear search on exit
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close Search"
+                            )
+                        }
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear Search"
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Content for expanded state (unused since active = false)
                 }
-                IconButton(onClick = { /* TODO: Implement Filter */ }) {
-                    Icon(imageVector = Icons.Default.FilterList, contentDescription = "Filter")
-                }
-            }, scrollBehavior = scrollBehavior
-        )
+            }
+        } else {
+            // --- DEFAULT TOP BAR ---
+            TopAppBar(
+                title = { Text("Sessions") }, actions = {
+                    IconButton(onClick = { isSearchActive = true }) {
+                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+                    }
+
+                    // Filter Dropdown Wrapper
+                    Box {
+                        IconButton(onClick = { showFilterMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filter",
+                                tint = if (selectedFilter != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showFilterMenu,
+                            onDismissRequest = { showFilterMenu = false }) {
+                            DropdownMenuItem(text = { Text("All Sessions") }, onClick = {
+                                viewModel.updateFilter(null)
+                                showFilterMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Practice Only") }, onClick = {
+                                viewModel.updateFilter(SessionType.PRACTICE)
+                                showFilterMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Competition Only") }, onClick = {
+                                viewModel.updateFilter(SessionType.COMPETITION)
+                                showFilterMenu = false
+                            })
+                        }
+                    }
+                }, scrollBehavior = scrollBehavior
+            )
+        }
     }, floatingActionButton = {
         ExtendedFloatingActionButton(
             text = { Text("New Session") },
             icon = { Icon(Icons.Default.Add, contentDescription = "Start Session") },
             onClick = { showNewSessionSheet = true },
-            expanded = scrollBehavior.state.collapsedFraction < 0.5f // Shrinks to a normal FAB when scrolling down
+            expanded = scrollBehavior.state.collapsedFraction < 0.5f
         )
     }) { innerPadding ->
 
@@ -122,18 +196,23 @@ fun SessionScreen(
                         availableRounds.find { it.round.id == session.roundId }?.round?.name
                             ?: "Unknown Round (ID: ${session.roundId})"
 
+                    val stats by viewModel.getSessionStats(session.id)
+                        .collectAsState(initial = Pair(0, 0f))
+
                     SessionItemCard(
-                        session = session, roundName = roundName, onClick = {
+                        session = session,
+                        roundName = roundName,
+                        totalScore = stats.first,
+                        average = stats.second,
+                        onClick = {
                             selectedSessionForSummary = session
-                            viewModel.loadSessionSummary(session.id) // <-- TRIGGER FETCH
+                            viewModel.loadSessionSummary(session.id)
                         })
                 }
             }
-        } // <--- Notice the closing brace for the 'else' block is here now!
+        }
 
-        // --- 2. Overlays & Bottom Sheets (Outside the if/else) ---
-
-        // Show the Modal Bottom Sheet when FAB is clicked
+        // --- 2. Overlays & Bottom Sheets ---
         if (showNewSessionSheet) {
             NewSessionDialog(
                 rounds = availableRounds,
@@ -156,28 +235,27 @@ fun SessionScreen(
             SessionSummaryBottomSheet(
                 session = sessionToSummarize,
                 roundName = roundName,
-                summaryData = summaryData, // <-- PASS REAL DATA HERE
+                summaryData = summaryData,
                 onDismiss = {
                     selectedSessionForSummary = null
-                    viewModel.clearSessionSummary() // Cleanup
+                    viewModel.clearSessionSummary()
                 },
                 onEditClick = {
-                    selectedSessionForSummary = null // Close sheet
-                    onNavigateToScoring(sessionToSummarize.id) // Navigate to the scoring screen
+                    selectedSessionForSummary = null
+                    onNavigateToScoring(sessionToSummarize.id)
                 },
                 onDeleteClick = {
-                    // Instead of deleting immediately, trigger the confirmation dialog
                     sessionToDelete = sessionToSummarize
                     selectedSessionForSummary = null
                 },
                 onNotesClick = {
-                    showNotesDialogFor = sessionToSummarize // Trigger the dialog
-                    selectedSessionForSummary =
-                        null // Optionally close the bottom sheet to focus on typing
+                    showNotesDialogFor = sessionToSummarize
+                    selectedSessionForSummary = null
                 })
         }
     }
 
+    // --- 3. Dialogs ---
     sessionToDelete?.let { session ->
         AlertDialog(
             onDismissRequest = { sessionToDelete = null },
@@ -208,7 +286,6 @@ fun SessionScreen(
             })
     }
 
-    // 3. Notes Dialog
     showNotesDialogFor?.let { session ->
         SessionNotesDialog(
             initialNotes = session.notes,
@@ -219,7 +296,6 @@ fun SessionScreen(
             })
     }
 }
-
 
 @Composable
 fun EmptySessionState(modifier: Modifier = Modifier) {
