@@ -23,5 +23,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Shot"
-include(":app")
- 
+include(":mobile")
+include(":core:data")
+include(":core:domain")
+include(":wear")
