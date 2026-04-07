@@ -38,17 +38,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.seyone.shot.di.AppContainer
-import com.seyone.shot.ui.screen.more.AboutScreen
-import com.seyone.shot.ui.screen.more.ArchersListScreen
-import com.seyone.shot.ui.screen.more.BowEquipmentScreen
-import com.seyone.shot.ui.screen.more.MoreScreen
-import com.seyone.shot.ui.screen.more.bow.BowDetailScreen
-import com.seyone.shot.ui.screen.scoring.ScoringScreen
-import com.seyone.shot.ui.screen.session.SessionScreen
-import com.seyone.shot.ui.screen.statistics.StatisticsScreen
-import com.seyone.shot.ui.theme.ShotTheme
 import dev.seyone.shot.ShotApplication
+import dev.seyone.shot.di.AppContainer
+import dev.seyone.shot.ui.screen.more.AboutScreen
+import dev.seyone.shot.ui.screen.more.ArchersListScreen
+import dev.seyone.shot.ui.screen.more.BowEquipmentScreen
+import dev.seyone.shot.ui.screen.more.MoreScreen
+import dev.seyone.shot.ui.screen.more.bow.BowDetailScreen
+import dev.seyone.shot.ui.screen.scoring.ScoringScreen
+import dev.seyone.shot.ui.screen.session.SessionScreen
+import dev.seyone.shot.ui.screen.statistics.StatisticsScreen
+import dev.seyone.shot.ui.theme.ShotTheme
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
