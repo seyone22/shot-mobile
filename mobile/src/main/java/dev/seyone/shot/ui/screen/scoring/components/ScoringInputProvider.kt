@@ -25,7 +25,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import dev.seyone.shot.data.local.entity.InputMethod
-import dev.seyone.shot.ui.screens.scoring.ScoringUiState
+import dev.seyone.shot.ui.screen.scoring.ScoringUiState
 
 @Composable
 fun ScoringInputProvider(
