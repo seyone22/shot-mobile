@@ -67,4 +67,4 @@ The project follows a modern, reactive architecture to ensure sub-second latency
 
 
 ## 📄 License
-This project is licensed under the MIT License.
+This project is licensed under the PolyForm Noncommercial License.
