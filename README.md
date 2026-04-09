@@ -1,6 +1,6 @@
-# ArrowStats: The Next-Gen Archery Ecosystem
+# Shot: The Next-Gen Archery Ecosystem
 
-**ArrowStats** is a high-performance, multi-platform archery scoring and analysis suite designed for competitive archers, coaches, and clubs. Built with an **offline-first** philosophy and **Material 3 Expressive** design, it transforms the traditional scoresheet into a data-driven coaching and equipment management engine.
+**Shot** is a high-performance, multi-platform archery scoring and analysis suite designed for competitive archers, coaches, and clubs. Built with an **offline-first** philosophy and **Material 3 Expressive** design, it transforms the traditional scoresheet into a data-driven coaching and equipment management engine.
 
 ## 🎯 Key Features
 
