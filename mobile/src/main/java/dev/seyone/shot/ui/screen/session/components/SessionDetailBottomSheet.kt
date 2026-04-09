@@ -1,15 +1,33 @@
 package dev.seyone.shot.ui.screen.session.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Notes
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material3.*
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -27,7 +45,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProdu
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import dev.seyone.shot.data.local.entity.SessionEntity
+import dev.seyone.core.domain.model.Session
 import dev.seyone.shot.ui.screen.session.SessionSummaryData
 import dev.seyone.shot.ui.theme.ArcheryColors
 import java.text.SimpleDateFormat
@@ -37,7 +55,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionSummaryBottomSheet(
-    session: SessionEntity,
+    session: Session,
     roundName: String,
     summaryData: SessionSummaryData?, // Passed in from ViewModel
     onDismiss: () -> Unit,
@@ -108,7 +126,11 @@ fun SessionSummaryBottomSheet(
             } else {
                 // --- Score Trend Chart ---
                 if (summaryData.endScores.isNotEmpty()) {
-                    Text("End Progression", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "End Progression",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     EndScoreLineChart(
                         scores = summaryData.endScores,
                         modifier = Modifier
@@ -133,15 +155,25 @@ fun SessionSummaryBottomSheet(
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
                             MetricItem("Total", summaryData.totalScore.toString())
-                            MetricItem("Average", String.format(Locale.getDefault(), "%.2f", summaryData.average))
-                            MetricItem("Golds", summaryData.golds.toString(), ArcheryColors.GoldText)
+                            MetricItem(
+                                "Average",
+                                String.format(Locale.getDefault(), "%.2f", summaryData.average)
+                            )
+                            MetricItem(
+                                "Golds",
+                                summaryData.golds.toString(),
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
-                            MetricItem("Hits", "${summaryData.hits} / ${summaryData.totalArrowsShot}")
+                            MetricItem(
+                                "Hits",
+                                "${summaryData.hits} / ${summaryData.totalArrowsShot}"
+                            )
                             MetricItem("X's", summaryData.xs.toString())
                         }
                     }
@@ -177,10 +209,23 @@ private fun ActionIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MetricItem(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+private fun MetricItem(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = valueColor)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = valueColor
+        )
     }
 }
 

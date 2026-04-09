@@ -1,6 +1,7 @@
 package dev.seyone.shot.ui.screen.scoring
 
-import androidx.compose.foundation.background
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -13,15 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.seyone.shot.data.domain.repository.RoundRepository
-import dev.seyone.shot.data.domain.repository.ScoringRepository
-import dev.seyone.shot.data.domain.repository.SessionRepository
+import dev.seyone.core.domain.repository.RoundRepository
+import dev.seyone.core.domain.repository.ScoringRepository
+import dev.seyone.core.domain.repository.SessionRepository
 import dev.seyone.shot.ui.screen.scoring.components.ScoringInputProvider
 import dev.seyone.shot.ui.theme.ArcheryColors
 import java.util.Locale
@@ -32,7 +33,7 @@ fun ScoringScreen(
     sessionId: Long,
     scoringRepository: ScoringRepository,
     sessionRepository: SessionRepository,
-    roundRepository: RoundRepository, // <-- 1. Add this parameter
+    roundRepository: RoundRepository,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -41,21 +42,52 @@ fun ScoringScreen(
             sessionId = sessionId,
             scoringRepository = scoringRepository,
             sessionRepository = sessionRepository,
-            roundRepository = roundRepository // <-- 2. Pass it to the factory
+            roundRepository = roundRepository
         )
     )
 
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
+    // 1. Get the Android context for the Toast
+    val context = LocalContext.current
+
+    // 2. Add the Event Listener
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is ScoringUiEvent.ShowToast -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     // 2. Trigger an auto-scroll whenever the active end changes, or an arrow is added to the current end
     LaunchedEffect(state.currentEndIndex, state.ends.getOrNull(state.currentEndIndex)?.size) {
-        // Index 0 is the "Distance" header item.
-        // Therefore, the current end's list index is currentEndIndex + 1.
-        val targetIndex = state.currentEndIndex + 1
+        // Calculate the exact list index based on headers and ends
+        var targetListIndex = 0
+        var endsCounted = 0
+
+        for (dist in state.distances) {
+            targetListIndex++ // Add 1 for the Distance Header item itself
+
+            if (state.currentEndIndex < endsCounted + dist.numberOfEnds) {
+                // The current end is inside this distance block. Add the offset and stop.
+                targetListIndex += (state.currentEndIndex - endsCounted)
+                break
+            }
+            // Otherwise, add all ends from this distance and keep searching
+            targetListIndex += dist.numberOfEnds
+            endsCounted += dist.numberOfEnds
+        }
+
+        // Fallback if distances are somehow empty
+        val finalIndex =
+            if (state.distances.isEmpty()) state.currentEndIndex + 1 else targetListIndex
 
         // Use animateScrollToItem for a smooth, user-friendly transition
-        listState.animateScrollToItem(index = targetIndex)
+        listState.animateScrollToItem(index = finalIndex)
     }
 
     Scaffold(
@@ -63,7 +95,7 @@ fun ScoringScreen(
         topBar = {
             TopAppBar(
                 title = { Text(state.title, fontWeight = FontWeight.Bold) },
-                navigationIcon = { // <-- Add the M3 Navigation Icon
+                navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -93,7 +125,11 @@ fun ScoringScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Average", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "Average",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Text(
                                 text = String.format(Locale.getDefault(), "%.2f", state.average),
                                 style = MaterialTheme.typography.titleLarge,
@@ -116,7 +152,11 @@ fun ScoringScreen(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "Total",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Text(
                                 text = state.totalScore.toString(),
                                 style = MaterialTheme.typography.headlineSmall,
@@ -127,9 +167,9 @@ fun ScoringScreen(
                     }
                 }
 
-                // The Keyboard
+                // The Keyboard / Target Input
                 ScoringInputProvider(
-                    inputMethod = state.inputMethod, // This comes from your SessionEntity
+                    inputMethod = state.inputMethod,
                     onValueInput = viewModel::onArrowInput,
                     onTargetInput = viewModel::onTargetInput,
                     onBackspace = viewModel::onBackspace,
@@ -140,98 +180,154 @@ fun ScoringScreen(
         }
     ) { innerPadding ->
         LazyColumn(
-            state = listState, // 3. Attach the list state to the LazyColumn
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Keep track of our global index across multiple distances
+            var currentEndGlobalIndex = 0
 
-            // Header for the specific distance being shot (Item Index 0)
-            item {
-                Text(
-                    text = "Distance: ${state.distance}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+            state.distances.forEach { distance ->
+                // 1. Distance Header
+                item {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Distance: ${distance.distanceValue}${distance.distanceUnit.name.take(1).lowercase()}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${distance.numberOfEnds} Ends",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                // 2. Slice the global list of ends to only show the ones for this distance
+                val endsInThisDistance = state.ends.drop(currentEndGlobalIndex).take(distance.numberOfEnds)
+
+                // --- THE FIX: Capture the index right here! ---
+                val capturedStartIndex = currentEndGlobalIndex
+
+                // 3. Render the End Rows
+                itemsIndexed(endsInThisDistance) { localIndex, arrows ->
+                    // Use the frozen captured index instead of the mutating 'var'
+                    val globalIndex = capturedStartIndex + localIndex
+
+                    EndRow(
+                        endNumber = globalIndex + 1,
+                        arrows = arrows,
+                        arrowsPerEnd = distance.arrowsPerEnd,
+                        selectedArrowIndex = if (state.selectedEndIndex == globalIndex) state.selectedArrowIndex else null,
+                        onArrowClick = { arrowIdx ->
+                            viewModel.selectArrowForEdit(globalIndex, arrowIdx)
+                        }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+
+                // Increment our global tracker for the next distance in the loop
+                currentEndGlobalIndex += distance.numberOfEnds
             }
 
-            // The list of ends (Item Indexes 1 to N)
-            itemsIndexed(state.ends) { index, arrows ->
-                EndRow(endNumber = index + 1, arrows = arrows)
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            }
+            // Add a spacer at the bottom so the last row isn't hidden behind the keypad
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
 
 @Composable
-fun EndRow(endNumber: Int, arrows: List<ArrowInput>) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun EndRow(
+    endNumber: Int,
+    arrows: List<ArrowInput>,
+    arrowsPerEnd: Int, // Pass this to know how many slots to draw
+    selectedArrowIndex: Int?,
+    onArrowClick: (Int) -> Unit
+) {
+    Surface(
+        // Subtle background highlight if this entire row is being edited
+        color = if (selectedArrowIndex != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        // End Number Indicator
-        Text(
-            text = "$endNumber.",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(32.dp)
-        )
-
-        // Arrow Slots (Handles standard 3 or 6 arrow ends beautifully)
         Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            for (i in 0 until 6) {
-                if (i < arrows.size) {
-                    ArrowCircle(arrow = arrows[i])
-                } else if (i < 3 || arrows.size > 3) {
-                    // Render empty slots to guide the user visually.
-                    // Only show 4-6 if they've passed 3 arrows.
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+            Text(
+                text = "$endNumber.",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(32.dp)
+            )
+
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Loop through the maximum arrows per end (e.g., 3 or 6)
+                for (i in 0 until arrowsPerEnd) {
+                    val arrow = arrows.getOrNull(i)
+                    val isSelected = selectedArrowIndex == i
+
+                    ArrowCircle(
+                        arrow = arrow,
+                        isSelected = isSelected,
+                        onClick = { onArrowClick(i) }
                     )
                 }
             }
-        }
 
-        // End Total Score
-        val endTotal = arrows.sumOf { it.score }
-        Text(
-            text = endTotal.toString(),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(48.dp)
-        )
+            val endTotal = arrows.sumOf { it.score }
+            Text(
+                text = endTotal.toString(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(48.dp)
+            )
+        }
     }
 }
 
 @Composable
-fun ArrowCircle(arrow: ArrowInput) {
-    val bgColor = when (arrow.value) {
-        "X", "10", "9" -> ArcheryColors.Gold
-        "8", "7" -> ArcheryColors.Red
-        "6", "5" -> ArcheryColors.Blue
-        "4", "3" -> ArcheryColors.Black
-        "2", "1" -> ArcheryColors.White
-        "M" -> ArcheryColors.Miss
-        else -> Color.Gray
-    }
-    val textColor = when (arrow.value) {
+fun ArrowCircle(
+    arrow: ArrowInput?,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    // If arrow is null, it's an empty slot
+    val bgColor =
+        if (arrow == null) MaterialTheme.colorScheme.surfaceVariant else when (arrow.value) {
+            "X", "10", "9" -> ArcheryColors.Gold
+            "8", "7" -> ArcheryColors.Red
+            "6", "5" -> ArcheryColors.Blue
+            "4", "3" -> ArcheryColors.Black
+            "2", "1" -> ArcheryColors.White
+            "M" -> ArcheryColors.Miss
+            else -> Color.Gray
+        }
+
+    val textColor = if (arrow == null) Color.Transparent else when (arrow.value) {
         "X", "10", "9" -> ArcheryColors.GoldText
         "8", "7" -> ArcheryColors.RedText
         "6", "5" -> ArcheryColors.BlueText
@@ -241,20 +337,25 @@ fun ArrowCircle(arrow: ArrowInput) {
         else -> Color.White
     }
 
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(bgColor)
-            // Add a subtle border for the white text/background so it doesn't bleed into the app background
-            .then(if (bgColor == ArcheryColors.White) Modifier.background(Color.LightGray.copy(alpha=0.5f)) else Modifier),
-        contentAlignment = Alignment.Center
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = bgColor,
+        // Draw a thick primary border if selected, otherwise standard border for white arrows
+        border = if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+        else if (bgColor == ArcheryColors.White) BorderStroke(1.dp, Color.LightGray)
+        else null,
+        modifier = Modifier.size(32.dp)
     ) {
-        Text(
-            text = arrow.value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = textColor
-        )
+        Box(contentAlignment = Alignment.Center) {
+            if (arrow != null) {
+                Text(
+                    text = arrow.value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+            }
+        }
     }
 }

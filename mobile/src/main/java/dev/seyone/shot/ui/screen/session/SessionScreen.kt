@@ -48,8 +48,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.seyone.shot.data.local.entity.SessionEntity
-import dev.seyone.shot.data.local.entity.SessionType
+import dev.seyone.core.data.entity.SessionEntity
+import dev.seyone.core.domain.SessionType
+import dev.seyone.core.domain.model.Session
 import dev.seyone.shot.di.AppViewModelProvider
 import dev.seyone.shot.ui.screen.session.components.NewSessionDialog
 import dev.seyone.shot.ui.screen.session.components.SessionItemCard
@@ -81,9 +82,9 @@ fun SessionScreen(
 
     // Bottom Sheet & Dialog States
     var showNewSessionSheet by rememberSaveable { mutableStateOf(false) }
-    var selectedSessionForSummary by remember { mutableStateOf<SessionEntity?>(null) }
-    var showNotesDialogFor by remember { mutableStateOf<SessionEntity?>(null) }
-    var sessionToDelete by remember { mutableStateOf<SessionEntity?>(null) }
+    var selectedSessionForSummary by remember { mutableStateOf<Session?>(null) }
+    var showNotesDialogFor by remember { mutableStateOf<Session?>(null) }
+    var sessionToDelete by remember { mutableStateOf<Session?>(null) }
 
     Scaffold(modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection), topBar = {
         if (isSearchActive) {
@@ -189,7 +190,7 @@ fun SessionScreen(
             ) {
                 items(sessions, key = { it.id }) { session ->
                     val roundName =
-                        availableRounds.find { it.round.id == session.roundId }?.round?.name
+                        availableRounds.find { it.id == session.roundId }?.name
                             ?: "Unknown Round (ID: ${session.roundId})"
 
                     val stats by viewModel.getSessionStats(session.id)
@@ -225,7 +226,7 @@ fun SessionScreen(
 
         selectedSessionForSummary?.let { sessionToSummarize ->
             val roundName =
-                availableRounds.find { it.round.id == sessionToSummarize.roundId }?.round?.name
+                availableRounds.find { it.id == sessionToSummarize.roundId }?.name
                     ?: "Unknown Round"
 
             SessionSummaryBottomSheet(

@@ -15,55 +15,138 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import dev.seyone.core.domain.TargetFaceSize
 import dev.seyone.shot.ui.theme.ArcheryColors
 
 @Composable
 fun ScoringTargetFace(
-    onTargetTap: (Offset, Float) -> Unit,
-    hits: List<Offset>, // <-- NEW PARAMETER: List of points to draw
-    modifier: Modifier = Modifier
+    onTargetTap: (Offset, Float, TargetFaceSize) -> Unit, // Updated signature
+    hits: List<Offset>,
+    modifier: Modifier = Modifier,
+    targetFace: TargetFaceSize = TargetFaceSize.CM_122 // Feed directly from DB state
 ) {
     val haptic = LocalHapticFeedback.current
-
-    // We use M3's outlineVariant color for the markers to ensure contrast across themes
     val markerColor = MaterialTheme.colorScheme.outlineVariant
+    val markerRadius = 5.dp
 
     BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
         val center = Offset(constraints.maxWidth / 2f, constraints.maxHeight / 2f)
         val targetRadius = constraints.maxWidth / 2f
-        val ringWidth = targetRadius / 10f
+
+        // Divide the radius by the amount of physical rings on this specific paper
+        val ringWidth = targetRadius / targetFace.rings
 
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
+                .pointerInput(targetFace) {
                     detectTapGestures { offset ->
-                        onTargetTap(offset, targetRadius)
+                        onTargetTap(offset, targetRadius, targetFace)
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 }
         ) {
-            // --- Existing Ring Drawing Logic (from your provided code) ---
-            val colors = listOf(ArcheryColors.White, ArcheryColors.Black, ArcheryColors.Blue, ArcheryColors.Red, ArcheryColors.Gold)
-            for (i in 0 until 5) {
-                val radius = targetRadius - (i * 2 * ringWidth)
-                drawCircle(color = colors[i], radius = radius, center = center)
-            }
-            for (i in 1..10) {
-                drawCircle(color = Color.Gray.copy(alpha = 0.3f), radius = i * ringWidth, center = center, style = Stroke(width = 1.dp.toPx()))
-            }
-            drawCircle(color = Color.Black.copy(alpha = 0.2f), radius = ringWidth / 2f, center = center, style = Stroke(width = 1.dp.toPx()))
-            // --- End of Existing Logic ---
+            // 1. Draw Rings (From outside in)
+            // If rings = 5 (Triple Spot), starting score is 11 - 5 = 6.
+            // It will only draw the rings for 6, 7, 8, 9, 10.
+            val startingScore = 11 - targetFace.rings
 
-            // --- THE MAGIC ADD-ON: Draw Shot Markers ---
-            // Now that the rings are drawn, layer the 'hits' on top!
+            for (score in startingScore..10) {
+                val currentRingIndex = 11 - score
+                val currentRadius = currentRingIndex * ringWidth
+
+                drawCircle(
+                    color = getWaRingColor(score),
+                    radius = currentRadius,
+                    center = center
+                )
+            }
+
+            // 2. Draw Ring Separator Lines
+            for (i in 1..targetFace.rings) {
+                drawCircle(
+                    color = Color.Gray.copy(alpha = 0.5f),
+                    radius = i * ringWidth,
+                    center = center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
+
+            // 3. Draw Inner 10 (X-Ring)
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.3f),
+                radius = ringWidth / 2f,
+                center = center,
+                style = Stroke(width = 1.dp.toPx())
+            )
+
+            // 4. Draw Shot Markers
             hits.forEach { hitCoordinate ->
-                // Draw a simple, solid circle at the tap position
                 drawCircle(
                     color = markerColor,
-                    radius = 5.dp.toPx(), // Set the size of the marker
-                    center = hitCoordinate // Use the exact captured offset
+                    radius = markerRadius.toPx(),
+                    center = hitCoordinate
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Helper to determine standard World Archery colors based on ring value.
+ */
+private fun getWaRingColor(score: Int): Color {
+    return when (score) {
+        10, 9 -> ArcheryColors.Gold
+        8, 7 -> ArcheryColors.Red
+        6, 5 -> ArcheryColors.Blue
+        4, 3 -> ArcheryColors.Black
+        2, 1 -> ArcheryColors.White
+        else -> Color.Transparent
+    }
+}
+
+/**
+ * Calculates the score natively handling Imperial, Standard Metric, and Compound Inner-10 math.
+ */
+fun calculateArrowScore(
+    tapOffset: Offset,
+    center: Offset,
+    targetRadius: Float,
+    targetFace: TargetFaceSize,
+    scoringMethod: String // Passed from your DB (e.g. "METRIC_INNER_10")
+): String {
+    val distance = (tapOffset - center).getDistance()
+
+    // Automatic Miss if tapped outside the paper bounds
+    if (distance > targetRadius) return "M"
+
+    val ringWidth = targetRadius / targetFace.rings
+    val scoreOffset = (distance / ringWidth).toInt() // 0 = Innermost ring
+
+    // Check for dead-center X-Ring
+    val isX = distance <= (ringWidth / 2f)
+
+    return when (scoringMethod) {
+        "IMPERIAL_5_ZONE" -> {
+            // Imperial is shot on a 10-ring face, but scored in 5 color zones (9, 7, 5, 3, 1)
+            // This integer math naturally pairs the 10 rings into 5 zones.
+            var score = 9 - ((scoreOffset / 2) * 2)
+            if (score > 9) score = 9
+            score.toString()
+        }
+        "METRIC_INNER_10" -> {
+            // Compound Indoor Rule: Only the tiny X-ring is a 10. The rest of the gold is a 9.
+            if (isX) "X" // Or "10" depending on your ViewModel preference
+            else if (scoreOffset == 0) "9"
+            else (10 - scoreOffset).toString()
+        }
+        else -> {
+            // "METRIC_10_ZONE" (Standard Recurve / Vegas Math)
+            if (isX) "X" else {
+                var score = 10 - scoreOffset
+                if (score > 10) score = 10
+                score.toString()
             }
         }
     }

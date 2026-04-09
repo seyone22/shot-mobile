@@ -3,12 +3,13 @@ package dev.seyone.shot.ui.screen.session
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import dev.seyone.shot.data.domain.repository.RoundRepository
-import dev.seyone.shot.data.domain.repository.ScoringRepository
-import dev.seyone.shot.data.domain.repository.SessionRepository
-import dev.seyone.shot.data.local.entity.InputMethod
-import dev.seyone.shot.data.local.entity.SessionEntity
-import dev.seyone.shot.data.local.entity.SessionType
+import dev.seyone.core.data.entity.SessionEntity
+import dev.seyone.core.domain.InputMethod
+import dev.seyone.core.domain.SessionType
+import dev.seyone.core.domain.model.Session
+import dev.seyone.core.domain.repository.RoundRepository
+import dev.seyone.core.domain.repository.ScoringRepository
+import dev.seyone.core.domain.repository.SessionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,7 +61,7 @@ class SessionViewModel(
             val matchesFilter = filter == null || session.sessionType == filter
 
             // 2. Check Search matches (searching by Round Name or Notes)
-            val roundName = rounds.find { it.round.id == session.roundId }?.round?.name ?: ""
+            val roundName = rounds.find { it.id == session.roundId }?.name ?: ""
             val matchesSearch = query.isBlank() ||
                     roundName.contains(query, ignoreCase = true) ||
                     session.notes.contains(query, ignoreCase = true)
@@ -80,7 +81,7 @@ class SessionViewModel(
     }
 
 
-    val sessionList: StateFlow<List<SessionEntity>> = sessionRepository.getAllSessionsStream()
+    val sessionList: StateFlow<List<Session>> = sessionRepository.getAllSessionsStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     // --- Summary State ---
@@ -93,7 +94,7 @@ class SessionViewModel(
     fun loadSessionSummary(sessionId: Long) {
         summaryJob?.cancel() // Cancel previous observation if user taps fast
         summaryJob = viewModelScope.launch {
-            scoringRepository.getEndsWithArrowsForSession(sessionId).collect { endsWithArrows ->
+            scoringRepository.getEndsForSessionStream(sessionId).collect { endsWithArrows ->
                 val allArrows = endsWithArrows.flatMap { it.arrows }
 
                 val total = allArrows.sumOf { it.scoreValue }
@@ -130,20 +131,20 @@ class SessionViewModel(
         numberOfArchers: Int, arrowsPerEnd: Int, onSessionCreated: (Long) -> Unit
     ) {
         viewModelScope.launch {
-            val newSession = SessionEntity(
+            val newSession = Session(
                 roundId = roundId, sessionType = sessionType, inputMethod = inputMethod,
                 numberOfArchers = numberOfArchers, arrowsPerEnd = arrowsPerEnd,
-                bowId = null, arrowId = null, locationId = null
+                bowId = null, arrowId = null, locationId = null, timestamp = System.currentTimeMillis()
             )
             onSessionCreated(sessionRepository.insertSession(newSession))
         }
     }
 
-    fun deleteSession(session: SessionEntity) {
+    fun deleteSession(session: Session) {
         viewModelScope.launch { sessionRepository.deleteSession(session) }
     }
 
-    fun updateSessionNotes(session: SessionEntity, newNotes: String) {
+    fun updateSessionNotes(session: Session, newNotes: String) {
         viewModelScope.launch {
             // Copy the existing session with the new notes string and update the DB
             sessionRepository.updateSession(session.copy(notes = newNotes))
@@ -151,7 +152,7 @@ class SessionViewModel(
     }
 
     fun getSessionStats(sessionId: Long): Flow<Pair<Int, Float>> {
-        return scoringRepository.getEndsWithArrowsForSession(sessionId).map { endsWithArrows ->
+        return scoringRepository.getEndsForSessionStream(sessionId).map { endsWithArrows ->
             val allArrows = endsWithArrows.flatMap { it.arrows }
             val total = allArrows.sumOf { it.scoreValue }
             val avg = if (allArrows.isNotEmpty()) total.toFloat() / allArrows.size else 0f

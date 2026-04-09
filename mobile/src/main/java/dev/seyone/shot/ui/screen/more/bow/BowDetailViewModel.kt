@@ -3,9 +3,9 @@ package dev.seyone.shot.ui.screen.more.bow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.seyone.shot.data.domain.repository.BowComponentRepository
-import dev.seyone.shot.data.domain.repository.BowProfileRepository
-import dev.seyone.shot.data.local.entity.BowComponentEntity
+import dev.seyone.core.domain.model.BowComponent
+import dev.seyone.core.domain.repository.BowComponentRepository
+import dev.seyone.core.domain.repository.BowProfileRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,7 +24,7 @@ class BowDetailViewModel(
     val components = componentRepository.getComponentsForBowStream(bowId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
-    fun saveComponent(component: BowComponentEntity) {
+    fun saveComponent(component: BowComponent) {
         viewModelScope.launch {
             if (component.id == 0L) componentRepository.insert(component)
             else componentRepository.update(component)
@@ -40,7 +40,7 @@ class BowDetailViewModel(
         }
     }
 
-    fun deleteComponent(component: BowComponentEntity) {
+    fun deleteComponent(component: BowComponent) {
         viewModelScope.launch { componentRepository.delete(component) }
     }
 }

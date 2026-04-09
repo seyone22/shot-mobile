@@ -1,14 +1,27 @@
 package dev.seyone.shot.ui.screen.session.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.TrackChanges
-import androidx.compose.material3.*
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +30,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.seyone.shot.data.local.entity.SessionEntity
-import dev.seyone.shot.data.local.entity.SessionType
+import dev.seyone.core.domain.SessionType
+import dev.seyone.core.domain.model.Session
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -26,7 +39,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionItemCard(
-    session: SessionEntity,
+    session: Session,
     roundName: String, // Pass the resolved name here
     totalScore: Int,   // <-- ADDED
     average: Float,    // <-- ADDED
@@ -108,7 +121,8 @@ fun SessionItemCard(
                     }
                     DetailRow(
                         icon = inputIcon,
-                        text = session.inputMethod.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+                        text = session.inputMethod.name.replace("_", " ").lowercase()
+                            .replaceFirstChar { it.uppercase() }
                     )
                 }
 
@@ -125,7 +139,13 @@ fun SessionItemCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Avg: ${String.format(Locale.getDefault(), "%.1f", average)}", // <-- UPDATED
+                        text = "Avg: ${
+                            String.format(
+                                Locale.getDefault(),
+                                "%.1f",
+                                average
+                            )
+                        }", // <-- UPDATED
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )

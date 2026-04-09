@@ -3,10 +3,10 @@ package dev.seyone.shot.ui.screen.more
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import dev.seyone.shot.data.domain.repository.ArcherRepository
-import dev.seyone.shot.data.local.entity.AgeGroup
-import dev.seyone.shot.data.local.entity.ArcherEntity
-import dev.seyone.shot.data.local.entity.Gender
+import dev.seyone.core.domain.AgeGroup
+import dev.seyone.core.domain.Gender
+import dev.seyone.core.domain.model.Archer
+import dev.seyone.core.domain.repository.ArcherRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -16,7 +16,7 @@ class MoreViewModel(
     private val archerRepository: ArcherRepository
 ) : ViewModel() {
 
-    val archers: StateFlow<List<ArcherEntity>> = archerRepository.getArchersStream()
+    val archers: StateFlow<List<Archer>> = archerRepository.getArchersStream()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),
@@ -25,7 +25,7 @@ class MoreViewModel(
 
     fun addArcher(name: String, club: String?, gender: Gender, ageGroup: AgeGroup) {
         viewModelScope.launch {
-            val newArcher = ArcherEntity(
+            val newArcher = Archer(
                 name = name,
                 clubName = if (club.isNullOrBlank()) null else club,
                 gender = gender,
@@ -35,7 +35,7 @@ class MoreViewModel(
         }
     }
 
-    fun deleteArcher(archer: ArcherEntity) {
+    fun deleteArcher(archer: Archer) {
         viewModelScope.launch {
             archerRepository.deleteArcher(archer)
         }

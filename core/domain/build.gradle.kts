@@ -11,3 +11,9 @@ kotlin {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
     }
 }
+
+dependencies {
+    // No Android dependencies here!
+    // Only pure Kotlin libraries if needed (e.g., Coroutines for Suspend functions)
+    implementation(libs.kotlinx.coroutines.core)
+}

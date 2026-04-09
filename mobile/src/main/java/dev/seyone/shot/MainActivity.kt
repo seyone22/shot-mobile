@@ -38,13 +38,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import dev.seyone.shot.ShotApplication
 import dev.seyone.shot.di.AppContainer
-import dev.seyone.shot.ui.screen.more.AboutScreen
-import dev.seyone.shot.ui.screen.more.ArchersListScreen
-import dev.seyone.shot.ui.screen.more.BowEquipmentScreen
+import dev.seyone.shot.ui.screen.more.about.AboutScreen
+import dev.seyone.shot.ui.screen.more.archer.ArchersListScreen
+import dev.seyone.shot.ui.screen.more.bow.BowEquipmentScreen
 import dev.seyone.shot.ui.screen.more.MoreScreen
+import dev.seyone.shot.ui.screen.more.about.WhatsNewScreen
+import dev.seyone.shot.ui.screen.more.arrow.ArrowEquipmentScreen
 import dev.seyone.shot.ui.screen.more.bow.BowDetailScreen
+import dev.seyone.shot.ui.screen.more.location.LocationScreen
 import dev.seyone.shot.ui.screen.scoring.ScoringScreen
 import dev.seyone.shot.ui.screen.session.SessionScreen
 import dev.seyone.shot.ui.screen.statistics.StatisticsScreen
@@ -179,11 +181,25 @@ fun ShotApp(
                 )
             }
 
-            composable("manage_arrows") { PlaceholderScreen("Manage Arrows") }
-            composable("manage_locations") { PlaceholderScreen("Manage Locations") }
+            composable("manage_arrows") {
+                ArrowEquipmentScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable("manage_locations") {
+                LocationScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("what_new") {
+                WhatsNewScreen(onNavigateBack = { navController.popBackStack() })
+            }
 
             composable("about") {
-                AboutScreen(onNavigateBack = { navController.popBackStack() })
+                AboutScreen(onNavigateBack = { navController.popBackStack() },
+                    onNavigateToWhatNew = { navController.navigate("what_new") }
+                    )
             }
         }
     }

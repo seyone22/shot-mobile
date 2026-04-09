@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -39,8 +40,12 @@ fun StatisticsScreen(
     // Controls visibility of the Custom Date Range Picker
     var showDatePicker by remember { mutableStateOf(false) }
 
+    val scrollBehavior =
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
     Scaffold(
-        topBar = { CenterAlignedTopAppBar(title = { Text("Statistics") }) }
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { CenterAlignedTopAppBar(title = { Text("Statistics") }, scrollBehavior = scrollBehavior) }
     ) { innerPadding ->
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

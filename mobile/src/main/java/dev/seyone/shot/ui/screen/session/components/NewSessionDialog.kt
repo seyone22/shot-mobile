@@ -1,13 +1,45 @@
 package dev.seyone.shot.ui.screen.session.components
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -15,28 +47,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import dev.seyone.shot.data.local.entity.InputMethod
-import dev.seyone.shot.data.local.entity.RoundWithDistances
-import dev.seyone.shot.data.local.entity.SessionType
+import dev.seyone.core.domain.InputMethod
+import dev.seyone.core.domain.SessionType
+import dev.seyone.core.domain.model.Round
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewSessionDialog(
-    rounds: List<RoundWithDistances>,
-    onDismiss: () -> Unit,
-    onStartSession: (
-        roundId: Long,
-        sessionType: SessionType,
-        inputMethod: InputMethod,
-        archers: Int,
-        arrowsPerEnd: Int
+    rounds: List<Round>, onDismiss: () -> Unit, onStartSession: (
+        roundId: Long, sessionType: SessionType, inputMethod: InputMethod, archers: Int, arrowsPerEnd: Int
     ) -> Unit
 ) {
     // --- State Management ---
-    val categories = remember(rounds) { rounds.map { it.round.category }.distinct() }
+    val categories = remember(rounds) { rounds.map { it.category }.distinct() }
     var selectedCategory by remember(categories) { mutableStateOf(categories.firstOrNull() ?: "") }
-    val filteredRounds = remember(rounds, selectedCategory) { rounds.filter { it.round.category == selectedCategory } }
-    var selectedRound by remember { mutableStateOf<RoundWithDistances?>(null) }
+    val filteredRounds = remember(
+        rounds, selectedCategory
+    ) { rounds.filter { it.category == selectedCategory } }
+    var selectedRound by remember { mutableStateOf<Round?>(null) }
 
     LaunchedEffect(selectedCategory) { selectedRound = filteredRounds.firstOrNull() }
 
@@ -46,8 +74,7 @@ fun NewSessionDialog(
     var arrowsPerEnd by remember { mutableIntStateOf(6) }
 
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
+        onDismissRequest = onDismiss, properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = true // Ensures it draws behind status bars if needed
         )
@@ -74,13 +101,23 @@ fun NewSessionDialog(
                         Button(
                             onClick = {
                                 selectedRound?.let {
-                                    onStartSession(it.round.id, sessionType, inputMethod, numberOfArchers, arrowsPerEnd)
+                                    onStartSession(
+                                        it.id,
+                                        sessionType,
+                                        inputMethod,
+                                        numberOfArchers,
+                                        arrowsPerEnd
+                                    )
                                 }
                             },
                             enabled = selectedRound != null,
                             contentPadding = PaddingValues(horizontal = 16.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text("Start")
                         }
@@ -94,8 +131,7 @@ fun NewSessionDialog(
                         actionIconContentColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
-            }
-        ) { innerPadding ->
+            }) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -115,10 +151,10 @@ fun NewSessionDialog(
 
                 DropdownField(
                     label = "Round",
-                    options = filteredRounds.map { it.round.name },
-                    selectedOption = selectedRound?.round?.name ?: "Select a round",
+                    options = filteredRounds.map { it.name },
+                    selectedOption = selectedRound?.name ?: "Select a round",
                     onOptionSelected = { name ->
-                        selectedRound = filteredRounds.find { it.round.name == name }
+                        selectedRound = filteredRounds.find { it.name == name }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -131,29 +167,30 @@ fun NewSessionDialog(
                     label = "Session Type",
                     options = listOf("Practice", "Competition"),
                     selectedIndex = if (sessionType == SessionType.PRACTICE) 0 else 1,
-                    onSelect = { sessionType = if (it == 0) SessionType.PRACTICE else SessionType.COMPETITION }
-                )
+                    onSelect = {
+                        sessionType = if (it == 0) SessionType.PRACTICE else SessionType.COMPETITION
+                    })
 
                 ScoringChoiceRow(
                     label = "Input Method",
                     options = listOf("Target Face", "Arrow Values"),
                     selectedIndex = if (inputMethod == InputMethod.TARGET_FACE) 0 else 1,
-                    onSelect = { inputMethod = if (it == 0) InputMethod.TARGET_FACE else InputMethod.ARROW_VALUES }
-                )
+                    onSelect = {
+                        inputMethod =
+                            if (it == 0) InputMethod.TARGET_FACE else InputMethod.ARROW_VALUES
+                    })
 
                 ScoringChoiceRow(
                     label = "Arrows per End",
                     options = listOf("3 Arrows", "6 Arrows"),
                     selectedIndex = if (arrowsPerEnd == 3) 0 else 1,
-                    onSelect = { arrowsPerEnd = if (it == 0) 3 else 6 }
-                )
+                    onSelect = { arrowsPerEnd = if (it == 0) 3 else 6 })
 
                 ScoringChoiceRow(
                     label = "Number of Archers",
                     options = listOf("1", "2", "3", "4"),
                     selectedIndex = numberOfArchers - 1,
-                    onSelect = { numberOfArchers = it + 1 }
-                )
+                    onSelect = { numberOfArchers = it + 1 })
 
                 Spacer(modifier = Modifier.height(40.dp))
             }
@@ -173,9 +210,15 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun ScoringChoiceRow(label: String, options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+private fun ScoringChoiceRow(
+    label: String, options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, option ->
                 SegmentedButton(
@@ -190,9 +233,17 @@ private fun ScoringChoiceRow(label: String, options: List<String>, selectedIndex
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DropdownField(label: String, options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+fun DropdownField(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+    ExposedDropdownMenuBox(
+        expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier
+    ) {
         OutlinedTextField(
             value = selectedOption,
             onValueChange = {},
@@ -204,7 +255,9 @@ fun DropdownField(label: String, options: List<String>, selectedOption: String, 
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = { onOptionSelected(option); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = { onOptionSelected(option); expanded = false })
             }
         }
     }

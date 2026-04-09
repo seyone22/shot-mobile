@@ -1,5 +1,6 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("com.android.library")
+    id("com.google.devtools.ksp") // Required for Room
 }
 
 android {
@@ -37,4 +38,16 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation(project(":core:domain"))
+
+    // Room Dependencies
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Coroutines for background database operations
+    implementation(libs.kotlinx.coroutines.android)
+
+
 }

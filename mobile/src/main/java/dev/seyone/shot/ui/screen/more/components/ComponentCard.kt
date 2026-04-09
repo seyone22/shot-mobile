@@ -14,10 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.seyone.shot.data.local.entity.BowComponentEntity
+import dev.seyone.core.domain.model.BowComponent
 
 @Composable
-fun ComponentCard(component: BowComponentEntity, onEdit: () -> Unit) {
+fun ComponentCard(component: BowComponent, onEdit: () -> Unit) {
     ElevatedCard(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {

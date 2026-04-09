@@ -7,8 +7,10 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.seyone.shot.ShotApplication
-import dev.seyone.shot.ui.screen.more.BowEquipmentViewModel
+import dev.seyone.shot.ui.screen.more.arrow.ArrowEquipmentViewModel
+import dev.seyone.shot.ui.screen.more.bow.BowEquipmentViewModel
 import dev.seyone.shot.ui.screen.more.bow.BowDetailViewModel
+import dev.seyone.shot.ui.screen.more.location.LocationViewModel
 import dev.seyone.shot.ui.screen.statistics.StatisticsViewModel
 import dev.seyone.shot.ui.screen.session.SessionViewModel
 
@@ -39,6 +41,16 @@ object AppViewModelProvider {
                 savedStateHandle = this.createSavedStateHandle(),
                 bowProfileRepository = shotApplication().container.bowProfileRepository,
                 componentRepository = shotApplication().container.bowComponentRepository
+            )
+        }
+        initializer {
+            ArrowEquipmentViewModel(
+                arrowSetRepository = shotApplication().container.arrowSetRepository
+            )
+        }
+        initializer {
+            LocationViewModel(
+                locationRepository = shotApplication().container.locationRepository
             )
         }
     }

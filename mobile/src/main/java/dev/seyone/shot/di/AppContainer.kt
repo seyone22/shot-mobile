@@ -1,23 +1,26 @@
 package dev.seyone.shot.di
 
+// 1. Import the Database and Repository IMPLEMENTATIONS from your Data layer
+
+// 2. Import the Repository INTERFACES from your Domain layer
 import android.content.Context
-import dev.seyone.shot.data.domain.repository.ArcherRepository
-import dev.seyone.shot.data.domain.repository.ArrowSetRepository
-import dev.seyone.shot.data.domain.repository.BowComponentRepository
-import dev.seyone.shot.data.domain.repository.BowProfileRepository
-import dev.seyone.shot.data.domain.repository.LocalArcherRepository
-import dev.seyone.shot.data.domain.repository.LocalArrowSetRepository
-import dev.seyone.shot.data.domain.repository.LocalBowProfileRepository
-import dev.seyone.shot.data.domain.repository.LocalLocationRepository
-import dev.seyone.shot.data.domain.repository.LocalRoundRepository
-import dev.seyone.shot.data.domain.repository.LocalScoringRepository
-import dev.seyone.shot.data.domain.repository.LocalSessionRepository
-import dev.seyone.shot.data.domain.repository.LocationRepository
-import dev.seyone.shot.data.domain.repository.OfflineBowComponentRepository
-import dev.seyone.shot.data.domain.repository.RoundRepository
-import dev.seyone.shot.data.domain.repository.ScoringRepository
-import dev.seyone.shot.data.domain.repository.SessionRepository
-import dev.seyone.shot.data.local.ShotDatabase
+import dev.seyone.core.data.ShotDatabase
+import dev.seyone.core.data.repository.LocalArcherRepository
+import dev.seyone.core.data.repository.LocalArrowSetRepository
+import dev.seyone.core.data.repository.LocalBowProfileRepository
+import dev.seyone.core.data.repository.LocalLocationRepository
+import dev.seyone.core.data.repository.LocalRoundRepository
+import dev.seyone.core.data.repository.LocalScoringRepository
+import dev.seyone.core.data.repository.LocalSessionRepository
+import dev.seyone.core.data.repository.OfflineBowComponentRepository
+import dev.seyone.core.domain.repository.ArcherRepository
+import dev.seyone.core.domain.repository.ArrowSetRepository
+import dev.seyone.core.domain.repository.BowComponentRepository
+import dev.seyone.core.domain.repository.BowProfileRepository
+import dev.seyone.core.domain.repository.LocationRepository
+import dev.seyone.core.domain.repository.RoundRepository
+import dev.seyone.core.domain.repository.ScoringRepository
+import dev.seyone.core.domain.repository.SessionRepository
 
 interface AppContainer {
     val sessionRepository: SessionRepository
@@ -32,6 +35,7 @@ interface AppContainer {
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
 
+    // Initialize the Room database from the :core:data module
     private val database: ShotDatabase by lazy {
         ShotDatabase.getDatabase(context)
     }
@@ -48,7 +52,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         LocalArcherRepository(database.archerDao())
     }
 
-    // ... inside your DefaultAppContainer implementation ...
     override val scoringRepository: ScoringRepository by lazy {
         LocalScoringRepository(database.scoringDao())
     }

@@ -39,7 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.seyone.shot.data.local.entity.BowComponentEntity
+import dev.seyone.core.domain.model.BowComponent
 import dev.seyone.shot.di.AppViewModelProvider
 import dev.seyone.shot.ui.screen.more.components.ComponentBottomSheet
 import dev.seyone.shot.ui.screen.more.components.ComponentCard
@@ -57,59 +57,52 @@ fun BowDetailScreen(
     val components by viewModel.components.collectAsState()
 
     var showComponentSheet by remember { mutableStateOf(false) }
-    var componentToEdit by remember { mutableStateOf<BowComponentEntity?>(null) }
+    var componentToEdit by remember { mutableStateOf<BowComponent?>(null) }
     var showMenu by remember { mutableStateOf(false) }
 
     // 2. Added state for a delete confirmation dialog
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(bow?.name ?: "Loading...") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, "Bow Actions")
-                        }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Edit Bow Profile") },
-                                onClick = {
-                                    showMenu = false
-                                    // 3. Trigger edit navigation
-                                    bow?.id?.let { onNavigateToEditBow(it) }
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.Edit, null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete Bow", color = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    showMenu = false
-                                    // 4. Show the confirmation dialog instead of deleting immediately
-                                    showDeleteConfirmDialog = true
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) }
-                            )
-                        }
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                componentToEdit = null
-                showComponentSheet = true
-            }) {
-                Icon(Icons.Default.Add, "Add Component")
+    Scaffold(topBar = {
+        TopAppBar(title = { Text(bow?.name ?: "Loading...") }, navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
             }
+        }, actions = {
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, "Bow Actions")
+                }
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(text = { Text("Edit Bow Profile") }, onClick = {
+                        showMenu = false
+                        // 3. Trigger edit navigation
+                        bow?.id?.let { onNavigateToEditBow(it) }
+                    }, leadingIcon = { Icon(Icons.Outlined.Edit, null) })
+                    DropdownMenuItem(text = {
+                        Text(
+                            "Delete Bow", color = MaterialTheme.colorScheme.error
+                        )
+                    }, onClick = {
+                        showMenu = false
+                        // 4. Show the confirmation dialog instead of deleting immediately
+                        showDeleteConfirmDialog = true
+                    }, leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error
+                        )
+                    })
+                }
+            }
+        })
+    }, floatingActionButton = {
+        FloatingActionButton(onClick = {
+            componentToEdit = null
+            showComponentSheet = true
+        }) {
+            Icon(Icons.Default.Add, "Add Component")
         }
-    ) { padding ->
+    }) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,24 +112,27 @@ fun BowDetailScreen(
         ) {
             // --- Summary Stats Section ---
             item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     StatBadge("Components", components.size.toString(), Modifier.weight(1f))
                     val totalCost = components.sumOf { it.price ?: 0.0 }
-                    StatBadge("Total Cost", "$${String.format("%.2f", totalCost)}", Modifier.weight(1f))
+                    StatBadge(
+                        "Total Cost", "$${String.format("%.2f", totalCost)}", Modifier.weight(1f)
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
                 Text("Equipped Hardware", style = MaterialTheme.typography.titleMedium)
             }
 
             // --- Component List ---
-            items(components) { component ->
+            items(components, key = { it.id }) { component ->
                 ComponentCard(
-                    component = component,
-                    onEdit = {
+                    component = component, onEdit = {
                         componentToEdit = component
                         showComponentSheet = true
-                    }
-                )
+                    })
             }
         }
     }
@@ -160,8 +156,7 @@ fun BowDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
-            }
-        )
+            })
     }
 
     if (showComponentSheet) {
@@ -172,7 +167,6 @@ fun BowDetailScreen(
             onSave = {
                 viewModel.saveComponent(it)
                 showComponentSheet = false // 6. Close the sheet after saving
-            }
-        )
+            })
     }
 }

@@ -7,4 +7,6 @@ plugins {
     id("com.google.devtools.ksp") version "2.3.2" apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.jetbrains.kotlin.jvm) apply false
+
+    id("com.google.android.gms.oss-licenses-plugin") version "0.11.0" apply false
 }

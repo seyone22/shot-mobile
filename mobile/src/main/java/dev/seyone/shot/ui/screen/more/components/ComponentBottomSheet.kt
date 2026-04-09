@@ -26,16 +26,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import dev.seyone.shot.data.local.entity.BowComponentEntity
-import dev.seyone.shot.data.local.entity.ComponentCategory
+import dev.seyone.core.data.entity.BowComponentEntity
+import dev.seyone.core.domain.ComponentCategory
+import dev.seyone.core.domain.model.BowComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComponentBottomSheet(
     bowId: Long,
-    initialComponent: BowComponentEntity?,
+    initialComponent: BowComponent?,
     onDismiss: () -> Unit,
-    onSave: (BowComponentEntity) -> Unit
+    onSave: (BowComponent) -> Unit
 ) {
     // Component State
     var category by remember {
@@ -134,7 +135,7 @@ fun ComponentBottomSheet(
             Button(
                 onClick = {
                     onSave(
-                        BowComponentEntity(
+                        BowComponent(
                             id = initialComponent?.id ?: 0L,
                             bowProfileId = bowId, // Link it back to the parent bow!
                             category = category,

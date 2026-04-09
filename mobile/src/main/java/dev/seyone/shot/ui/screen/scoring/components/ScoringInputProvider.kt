@@ -24,14 +24,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import dev.seyone.shot.data.local.entity.InputMethod
+import dev.seyone.core.domain.InputMethod
+import dev.seyone.core.domain.TargetFaceSize
 import dev.seyone.shot.ui.screen.scoring.ScoringUiState
 
 @Composable
 fun ScoringInputProvider(
     inputMethod: InputMethod,
     onValueInput: (String, Int, Boolean) -> Unit,
-    onTargetInput: (Offset, Float) -> Unit,
+    onTargetInput: (Offset, Float, TargetFaceSize) -> Unit,
     onBackspace: () -> Unit,
     onNextEnd: () -> Unit,
     state: ScoringUiState
@@ -58,7 +59,8 @@ fun ScoringInputProvider(
                         ScoringTargetFace(
                             onTargetTap = onTargetInput,
                             modifier = Modifier.size(300.dp),
-                            hits = state.currentEndHits, // <-- Feed the state list here!
+                            hits = state.currentEndHits, // <-- Feed the state list here!,
+                            targetFace = state.activeTargetFace
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         // Control buttons for Target mode

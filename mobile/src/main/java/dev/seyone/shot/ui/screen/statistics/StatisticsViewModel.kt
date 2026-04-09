@@ -2,33 +2,33 @@ package dev.seyone.shot.ui.screen.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.seyone.shot.data.domain.repository.RoundRepository
-import dev.seyone.shot.data.domain.repository.ScoringRepository
-import dev.seyone.shot.data.domain.repository.SessionRepository
-import dev.seyone.shot.data.local.entity.RoundWithDistances
-import kotlinx.coroutines.flow.*
+import dev.seyone.core.domain.model.Round
+import dev.seyone.core.domain.repository.RoundRepository
+import dev.seyone.core.domain.repository.ScoringRepository
+import dev.seyone.core.domain.repository.SessionRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 
 enum class TimeRange(val displayName: String) {
-    ALL_TIME("All Time"),
-    TODAY("Today"),
-    THIS_WEEK("This Week"),
-    THIS_MONTH("This Month"),
-    THIS_YEAR("This Year"),
+    ALL_TIME("All Time"), TODAY("Today"), THIS_WEEK("This Week"), THIS_MONTH("This Month"), THIS_YEAR(
+        "This Year"
+    ),
     CUSTOM("Custom") // <-- Added Custom
 }
 
 data class DailyStat(
-    val dateMs: Long,
-    val totalArrows: Int,
-    val averageScore: Float
+    val dateMs: Long, val totalArrows: Int, val averageScore: Float
 )
 
 data class StatisticsUiState(
     val isLoading: Boolean = true,
     val selectedTimeRange: TimeRange = TimeRange.THIS_MONTH,
     val selectedRoundId: Long? = null,
-    val availableRounds: List<RoundWithDistances> = emptyList(),
+    val availableRounds: List<Round> = emptyList(),
 
     // Core Summaries
     val totalArrowsShot: Int = 0,
@@ -57,8 +57,13 @@ class StatisticsViewModel(
     private val _selectedRoundId = MutableStateFlow<Long?>(null)
     private val _customDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
 
-    fun setTimeRange(range: TimeRange) { _selectedTimeRange.value = range }
-    fun setRoundFilter(roundId: Long?) { _selectedRoundId.value = roundId }
+    fun setTimeRange(range: TimeRange) {
+        _selectedTimeRange.value = range
+    }
+
+    fun setRoundFilter(roundId: Long?) {
+        _selectedRoundId.value = roundId
+    }
 
     fun setCustomDateRange(start: Long, end: Long) {
         // Add 86,399,999 ms to the end date to ensure it covers the very end of the selected day
@@ -70,11 +75,7 @@ class StatisticsViewModel(
     private val allRounds = roundRepository.getAllRoundsStream()
 
     val uiState: StateFlow<StatisticsUiState> = combine(
-        allSessions,
-        allRounds,
-        _selectedTimeRange,
-        _selectedRoundId,
-        _customDateRange
+        allSessions, allRounds, _selectedTimeRange, _selectedRoundId, _customDateRange
     ) { sessions, rounds, timeRange, roundId, customDates ->
 
         // 1. Filter Sessions by Time and Round
@@ -107,21 +108,24 @@ class StatisticsViewModel(
                 if (arrow.scoreValue == 10 || arrow.isXRing) golds++
                 if (arrow.scoreValue > 0) hits++
 
-                val label = if (arrow.isXRing) "X" else if (arrow.scoreValue == 0) "M" else arrow.scoreValue.toString()
+                val label =
+                    if (arrow.isXRing) "X" else if (arrow.scoreValue == 0) "M" else arrow.scoreValue.toString()
                 distribution[label] = distribution.getValue(label) + 1
             }
         }
 
         // 3. Calculate Averages
         val overallAvg = if (totalArrows > 0) totalScore.toFloat() / totalArrows else 0f
-        val avgArrowsPerSession = if (filteredSessions.isNotEmpty()) totalArrows.toFloat() / filteredSessions.size else 0f
+        val avgArrowsPerSession =
+            if (filteredSessions.isNotEmpty()) totalArrows.toFloat() / filteredSessions.size else 0f
 
         // 4. Calculate Daily Stats for Charts
         val groupedByDay = dailyScoresMap.map { (dayMs, scoresOnDay) ->
             DailyStat(
                 dateMs = dayMs,
                 totalArrows = scoresOnDay.size,
-                averageScore = if (scoresOnDay.isNotEmpty()) scoresOnDay.sum().toFloat() / scoresOnDay.size else 0f
+                averageScore = if (scoresOnDay.isNotEmpty()) scoresOnDay.sum()
+                    .toFloat() / scoresOnDay.size else 0f
             )
         }.sortedBy { it.dateMs }
 
@@ -143,7 +147,9 @@ class StatisticsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatisticsUiState())
 
     // --- Helper Math ---
-    private fun getStartAndEndTimes(range: TimeRange, customDates: Pair<Long, Long>?): Pair<Long, Long> {
+    private fun getStartAndEndTimes(
+        range: TimeRange, customDates: Pair<Long, Long>?
+    ): Pair<Long, Long> {
         if (range == TimeRange.CUSTOM && customDates != null) {
             return customDates
         }
@@ -160,7 +166,9 @@ class StatisticsViewModel(
             TimeRange.CUSTOM -> return Pair(0L, Long.MAX_VALUE) // Fallback
         }
 
-        startCal.set(Calendar.MINUTE, 0); startCal.set(Calendar.SECOND, 0); startCal.set(Calendar.MILLISECOND, 0)
+        startCal.set(Calendar.MINUTE, 0); startCal.set(
+            Calendar.SECOND, 0
+        ); startCal.set(Calendar.MILLISECOND, 0)
         return Pair(startCal.timeInMillis, endCal.timeInMillis)
     }
 

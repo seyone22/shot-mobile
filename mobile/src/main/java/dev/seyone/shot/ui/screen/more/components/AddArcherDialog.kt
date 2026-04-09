@@ -19,8 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.seyone.shot.data.local.entity.AgeGroup
-import dev.seyone.shot.data.local.entity.Gender
+import dev.seyone.core.domain.AgeGroup
+import dev.seyone.core.domain.Gender
 import dev.seyone.shot.ui.screen.session.components.DropdownField
 
 @Composable
