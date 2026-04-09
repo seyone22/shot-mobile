@@ -9,10 +9,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.Composable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.seyone22.shot.presentation.screen.shotscreenpe.ShotScreen
-import dev.seyone.shot.presentation.theme.ShotTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,12 +26,5 @@ class MainActivity : ComponentActivity() {
         setContent {
             ShotApp()
         }
-    }
-}
-
-@Composable
-fun ShotApp() {
-    ShotTheme {
-        ShotScreen()
     }
 }

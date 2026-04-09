@@ -1,101 +1,101 @@
 package dev.seyone.shot.presentation.screen.shotscreen
 
 import androidx.lifecycle.ViewModel
+import dev.seyone.core.domain.InputMethod
+import dev.seyone.core.domain.SessionType
+import dev.seyone.core.domain.model.Arrow
+import dev.seyone.core.domain.model.End
+import dev.seyone.core.domain.model.Session
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
-data class Shot(
-    val score: Int = 0,              // e.g., 10, 9, 8 ... (or 0 for miss)
-    val timestamp: Long = System.currentTimeMillis()
-)
-
-data class End(
-    val shots: List<Shot> = emptyList()
+data class WearSessionUiState(
+    val activeSession: Session? = null,
+    val currentEndArrows: List<Arrow> = emptyList(),
+    val liveHeartRate: Int = 85 // Mocked biometric data
 ) {
-    val totalShots: Int
-        get() = shots.size
+    // Computed domain properties for UI
+    val totalScore: Int
+        get() = (activeSession?.ends?.sumOf { end -> end.arrows.sumOf { it.scoreValue } } ?: 0) +
+                currentEndArrows.sumOf { it.scoreValue }
 
-    val endScore: Int
-        get() = shots.sumOf { it.score }
-}
+    val totalArrowCount: Int
+        get() = (activeSession?.ends?.sumOf { it.arrows.size } ?: 0) + currentEndArrows.size
 
-data class ShotUiState(
-    val ends: List<End> = emptyList()
-) {
-    val totalShots: Int
-        get() = ends.sumOf { it.totalShots }
-
-    val totalEnds: Int
-        get() = ends.size
-}
-
-// Track actions for undo
-sealed class ShotAction {
-    data class AddShot(val endIndex: Int) : ShotAction()
-    object NewEnd : ShotAction()
+    val averageArrow: Float
+        get() = if (totalArrowCount == 0) 0f else totalScore.toFloat() / totalArrowCount
 }
 
 class ShotScreenViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(WearSessionUiState())
+    val uiState: StateFlow<WearSessionUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(ShotUiState())
-    val uiState: StateFlow<ShotUiState> = _uiState.asStateFlow()
+    fun loadSession(session: Session) {
+        _uiState.update {
+            it.copy(activeSession = session, currentEndArrows = emptyList())
+        }
+    }
 
-    private val actionStack = mutableListOf<ShotAction>()
+    fun addArrow(score: Int, isX: Boolean = false, xCoord: Float? = null, yCoord: Float? = null) {
+        _uiState.update { state ->
+            val session = state.activeSession ?: return@update state
 
-    /** Increment arrow shot count in the current end */
-    fun incrementArrow(score: Int = 0) {
-        val currentState = _uiState.value
-        val updatedEnds = if (currentState.ends.isEmpty()) {
-            // first end, first shot
-            listOf(End(shots = listOf(Shot(score))))
-        } else {
-            val lastEnd = currentState.ends.last()
-            val updatedLastEnd = lastEnd.copy(
-                shots = lastEnd.shots + Shot(score)
+            // Construct the domain Arrow
+            val newArrow = Arrow(
+                endId = 0, // In-memory placeholder
+                sequenceOrder = state.currentEndArrows.size + 1,
+                scoreValue = score,
+                isXRing = isX,
+                xCoordinate = xCoord,
+                yCoordinate = yCoord
             )
-            currentState.ends.dropLast(1) + updatedLastEnd
+            state.copy(currentEndArrows = state.currentEndArrows + newArrow)
         }
-
-        _uiState.value = currentState.copy(ends = updatedEnds)
-        actionStack.add(ShotAction.AddShot(updatedEnds.lastIndex))
     }
 
-    /** Start a new end */
-    fun incrementEnd() {
-        val currentState = _uiState.value
-        val updatedEnds = currentState.ends + End()
-        _uiState.value = currentState.copy(ends = updatedEnds)
-        actionStack.add(ShotAction.NewEnd)
+    fun completeEnd() {
+        _uiState.update { state ->
+            val session = state.activeSession ?: return@update state
+            if (state.currentEndArrows.isEmpty()) return@update state
+
+            // Construct the domain End
+            val newEnd = End(
+                sessionId = session.id,
+                sequenceOrder = session.ends.size + 1,
+                arrows = state.currentEndArrows
+            )
+
+            // Append End to Session
+            val updatedSession = session.copy(ends = session.ends + newEnd)
+
+            state.copy(
+                activeSession = updatedSession,
+                currentEndArrows = emptyList() // Reset for the next end
+            )
+        }
     }
 
-    /** Undo last action (shot or end creation) */
     fun undoLastAction() {
-        if (actionStack.isEmpty()) return
+        _uiState.update { state ->
+            val session = state.activeSession ?: return@update state
 
-        val lastAction = actionStack.removeLast()
-        val currentState = _uiState.value
+            if (state.currentEndArrows.isNotEmpty()) {
+                // Undo the last arrow shot
+                state.copy(currentEndArrows = state.currentEndArrows.dropLast(1))
+            } else if (session.ends.isNotEmpty()) {
+                // Re-open the previous end
+                val lastEnd = session.ends.last()
+                val updatedSession = session.copy(ends = session.ends.dropLast(1))
 
-        when (lastAction) {
-            is ShotAction.AddShot -> {
-                val endIndex = lastAction.endIndex
-                val updatedEnd = currentState.ends[endIndex].copy(
-                    shots = currentState.ends[endIndex].shots.dropLast(1)
+                state.copy(
+                    activeSession = updatedSession,
+                    currentEndArrows = lastEnd.arrows.dropLast(1) // Drop the last arrow of that re-opened end
                 )
-                val updatedEnds = currentState.ends.toMutableList().also {
-                    it[endIndex] = updatedEnd
-                }
-                _uiState.value = currentState.copy(ends = updatedEnds)
-            }
-            ShotAction.NewEnd -> {
-                _uiState.value = currentState.copy(ends = currentState.ends.dropLast(1))
+            } else {
+                state
             }
         }
-    }
-
-    /** Reset all counters */
-    fun reset() {
-        _uiState.value = ShotUiState()
-        actionStack.clear()
     }
 }

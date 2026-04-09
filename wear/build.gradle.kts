@@ -58,6 +58,9 @@ dependencies {
     // For integration between Wear Compose and Androidx Navigation libraries
     implementation(libs.compose.navigation)
 
+    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
+
     // For Wear preview annotations
     implementation(libs.compose.ui.tooling)
 
