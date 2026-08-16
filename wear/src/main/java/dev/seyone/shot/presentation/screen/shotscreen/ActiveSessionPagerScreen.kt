@@ -154,9 +154,10 @@ fun NumericPickerScorer(
                 }
 
                 Text(
-                    text = if (isEndComplete) "End Complete" else "Arrow ${currentArrowsCount + 1} of $arrowsPerEnd",
+                    text = if (isEndComplete) "End Done" else "Arrow ${currentArrowsCount + 1} of $arrowsPerEnd",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
                 )
             }
 
@@ -242,9 +243,10 @@ fun TargetFaceScorer(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = if (isEndComplete) "End Complete" else "Arrow ${currentArrowsCount + 1} of $arrowsPerEnd",
+                text = if (isEndComplete) "End Done" else "Arrow ${currentArrowsCount + 1} of $arrowsPerEnd",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1
             )
 
             Box(
