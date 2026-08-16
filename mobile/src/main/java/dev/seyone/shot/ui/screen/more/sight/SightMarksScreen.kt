@@ -488,34 +488,59 @@ private fun AddSightMarkDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Sight Mark") },
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Log Sight Mark")
+                Text(
+                    text = "Record raw scale readings from your sight elevation bar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = distanceText,
-                        onValueChange = { distanceText = it },
-                        label = { Text("Distance") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Distance Input + Unit Selector
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Target Distance",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = distanceText,
+                            onValueChange = { distanceText = it },
+                            placeholder = { Text("30") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
 
-                    FilterChip(
-                        selected = unit == DistanceUnit.METERS,
-                        onClick = { unit = DistanceUnit.METERS },
-                        label = { Text("m") }
-                    )
-                    FilterChip(
-                        selected = unit == DistanceUnit.YARDS,
-                        onClick = { unit = DistanceUnit.YARDS },
-                        label = { Text("yd") }
-                    )
+                        SingleChoiceSegmentedButtonRow {
+                            SegmentedButton(
+                                selected = unit == DistanceUnit.METERS,
+                                onClick = { unit = DistanceUnit.METERS },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                            ) {
+                                Text("m")
+                            }
+                            SegmentedButton(
+                                selected = unit == DistanceUnit.YARDS,
+                                onClick = { unit = DistanceUnit.YARDS },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                            ) {
+                                Text("yd")
+                            }
+                        }
+                    }
                 }
 
+                // Elevation & Windage Side-by-Side (Matching single-line labels)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -523,7 +548,8 @@ private fun AddSightMarkDialog(
                     OutlinedTextField(
                         value = elevationText,
                         onValueChange = { elevationText = it },
-                        label = { Text("Elevation Mark") },
+                        label = { Text("Elevation") },
+                        placeholder = { Text("e.g. 4.25") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                         singleLine = true
@@ -532,17 +558,20 @@ private fun AddSightMarkDialog(
                     OutlinedTextField(
                         value = windageText,
                         onValueChange = { windageText = it },
-                        label = { Text("Windage (Opt)") },
+                        label = { Text("Windage") },
+                        placeholder = { Text("Optional") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
                 }
 
+                // Notes Field
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
-                    label = { Text("Notes (Optional)") },
+                    label = { Text("Notes") },
+                    placeholder = { Text("e.g., Light breeze, 40# limbs") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
