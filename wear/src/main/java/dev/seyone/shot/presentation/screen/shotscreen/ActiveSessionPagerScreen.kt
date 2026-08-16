@@ -37,6 +37,12 @@ import androidx.wear.compose.material3.Picker
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.rememberPickerState
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import dev.seyone.core.domain.InputMethod
 import dev.seyone.shot.presentation.screen.analysis.AnalysisPage
 
@@ -208,8 +214,9 @@ fun NumericPickerScorer(
 }
 
 
-@Composable
 
+
+@Composable
 fun TargetFaceScorer(
     currentArrowsCount: Int,
     arrowsPerEnd: Int,
@@ -218,44 +225,83 @@ fun TargetFaceScorer(
     onUndo: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val isEndComplete = currentArrowsCount >= arrowsPerEnd
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 28.dp, bottom = 52.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text("🎯", style = MaterialTheme.typography.displayLarge)
             Text(
-                "Arrow ${currentArrowsCount + 1}/$arrowsPerEnd",
-                style = MaterialTheme.typography.labelSmall
+                text = if (isEndComplete) "End Complete" else "Arrow ${currentArrowsCount + 1} of $arrowsPerEnd",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
             )
 
-// Mocking a tap on the target face returning a 9 at coordinates
-            Button(onClick = { onArrowAdded(9, 12.5f, -4.0f) }) {
-                Text("Simulate Plotted Shot")
-            }
-        }
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .aspectRatio(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(isEndComplete) {
+                            if (!isEndComplete) {
+                                detectTapGestures { offset ->
+                                    val radius = size.width / 2f
+                                    val dx = offset.x - radius
+                                    val dy = offset.y - radius
+                                    val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                                    val ringWidth = radius / 10f
+                                    val ringIndex = (dist / ringWidth).toInt()
+                                    val score = (10 - ringIndex).coerceIn(0, 10)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onArrowAdded(score, dx, dy)
+                                }
+                            }
+                        }
+                ) {
+                    val radius = size.width / 2f
+                    val ringWidth = radius / 10f
+                    val ringColors = listOf(
+                        Color(0xFFFFD700), Color(0xFFFFD700), // 10, 9 (Gold)
+                        Color(0xFFE63946), Color(0xFFE63946), // 8, 7 (Red)
+                        Color(0xFF457B9D), Color(0xFF457B9D), // 6, 5 (Blue)
+                        Color(0xFF1D3557), Color(0xFF1D3557), // 4, 3 (Black)
+                        Color.White, Color.White              // 2, 1 (White)
+                    )
 
-        Button(
-            onClick = onUndo,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-                .size(36.dp)
-        ) {
-            Text("↺")
+                    for (i in 9 downTo 0) {
+                        val currentR = (i + 1) * ringWidth
+                        drawCircle(
+                            color = ringColors[9 - i],
+                            radius = currentR,
+                            center = Offset(radius, radius)
+                        )
+                    }
+                }
+            }
         }
 
         EdgeButton(
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onEndComplete()
+                if (isEndComplete) {
+                    onEndComplete()
+                } else {
+                    onUndo()
+                }
             },
-
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Text("Finish End")
+            Text(if (isEndComplete) "Finish End" else "Undo Shot")
         }
     }
 }

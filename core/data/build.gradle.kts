@@ -48,6 +48,6 @@ dependencies {
 
     // Coroutines for background database operations
     implementation(libs.kotlinx.coroutines.android)
-
-
+    implementation(libs.play.services.wearable)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 }

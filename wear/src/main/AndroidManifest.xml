@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
 
     <uses-feature android:name="android.hardware.type.watch" />
 
@@ -18,13 +19,22 @@
             android:name="wear-sdk"
             android:required="false" />
 
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
+
+        <service
+            android:name="dev.seyone.shot.service.WearDataListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/active_session"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
 
         <activity
             android:name="dev.seyone.shot.presentation.MainActivity"
@@ -38,5 +48,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>

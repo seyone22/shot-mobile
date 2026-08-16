@@ -1,6 +1,8 @@
 package dev.seyone.shot.presentation.screen.shotscreen
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import dev.seyone.core.data.sync.WearDataSyncManager
 import dev.seyone.core.domain.InputMethod
 import dev.seyone.core.domain.SessionType
 import dev.seyone.core.domain.model.Arrow
@@ -32,6 +34,14 @@ class ShotScreenViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(WearSessionUiState())
     val uiState: StateFlow<WearSessionUiState> = _uiState.asStateFlow()
 
+    private var syncManager: WearDataSyncManager? = null
+
+    fun initSyncManager(context: Context) {
+        if (syncManager == null) {
+            syncManager = WearDataSyncManager(context)
+        }
+    }
+
     fun loadSession(session: Session) {
         _uiState.update {
             it.copy(activeSession = session, currentEndArrows = emptyList())
@@ -42,9 +52,8 @@ class ShotScreenViewModel : ViewModel() {
         _uiState.update { state ->
             val session = state.activeSession ?: return@update state
 
-            // Construct the domain Arrow
             val newArrow = Arrow(
-                endId = 0, // In-memory placeholder
+                endId = 0,
                 sequenceOrder = state.currentEndArrows.size + 1,
                 scoreValue = score,
                 isXRing = isX,
@@ -53,6 +62,7 @@ class ShotScreenViewModel : ViewModel() {
             )
             state.copy(currentEndArrows = state.currentEndArrows + newArrow)
         }
+        syncManager?.sendArrowShotToPhone(score, isX, xCoord, yCoord)
     }
 
     fun completeEnd() {
@@ -60,21 +70,20 @@ class ShotScreenViewModel : ViewModel() {
             val session = state.activeSession ?: return@update state
             if (state.currentEndArrows.isEmpty()) return@update state
 
-            // Construct the domain End
             val newEnd = End(
                 sessionId = session.id,
                 sequenceOrder = session.ends.size + 1,
                 arrows = state.currentEndArrows
             )
 
-            // Append End to Session
             val updatedSession = session.copy(ends = session.ends + newEnd)
 
             state.copy(
                 activeSession = updatedSession,
-                currentEndArrows = emptyList() // Reset for the next end
+                currentEndArrows = emptyList()
             )
         }
+        syncManager?.sendCompleteEndToPhone()
     }
 
     fun undoLastAction() {
@@ -82,20 +91,19 @@ class ShotScreenViewModel : ViewModel() {
             val session = state.activeSession ?: return@update state
 
             if (state.currentEndArrows.isNotEmpty()) {
-                // Undo the last arrow shot
                 state.copy(currentEndArrows = state.currentEndArrows.dropLast(1))
             } else if (session.ends.isNotEmpty()) {
-                // Re-open the previous end
                 val lastEnd = session.ends.last()
                 val updatedSession = session.copy(ends = session.ends.dropLast(1))
 
                 state.copy(
                     activeSession = updatedSession,
-                    currentEndArrows = lastEnd.arrows.dropLast(1) // Drop the last arrow of that re-opened end
+                    currentEndArrows = lastEnd.arrows.dropLast(1)
                 )
             } else {
                 state
             }
         }
+        syncManager?.sendUndoActionToPhone()
     }
 }

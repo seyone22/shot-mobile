@@ -4,16 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.seyone22.shot"
+    namespace = "dev.seyone.shot"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.seyone22.shot"
+        applicationId = "dev.seyone.shot"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     buildTypes {
@@ -37,6 +36,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
 
     implementation(libs.play.services.wearable)
     implementation(platform(libs.androidx.compose.bom))
@@ -48,14 +49,8 @@ dependencies {
     implementation(libs.wear.tooling.preview)
     implementation(libs.androidx.activity.compose)
     implementation(libs.core.splashscreen)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.ui.test.junit4)
-    debugImplementation(libs.ui.tooling)
-    debugImplementation(libs.ui.test.manifest)
-
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.horologist.composables)
-
-    // For integration between Wear Compose and Androidx Navigation libraries
     implementation(libs.compose.navigation)
 
     implementation(project(":core:domain"))
