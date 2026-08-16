@@ -164,15 +164,19 @@ fun NumericPickerScorer(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (isEndComplete) {
-                // Visual feedback that the end is done, removing the picker entirely
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = "Complete",
-                    tint = MaterialTheme.colorScheme.secondary,
+                Box(
                     modifier = Modifier
-                        .size(64.dp)
                         .weight(1f)
-                )
+                        .padding(bottom = 28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Complete",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             } else {
                 // High-Performance Picker
                 Picker(
