@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="shortcut_quick_start"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_target"
+        android:shortcutShortLabel="@string/shortcut_quick_start_short"
+        android:shortcutLongLabel="@string/shortcut_quick_start_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.seyone.shot"
+            android:targetClass="dev.seyone.shot.MainActivity">
+            <extra
+                android:name="navigate_to"
+                android:value="quick_start" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_sight_marks"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sight"
+        android:shortcutShortLabel="@string/shortcut_sight_marks_short"
+        android:shortcutLongLabel="@string/shortcut_sight_marks_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.seyone.shot"
+            android:targetClass="dev.seyone.shot.MainActivity">
+            <extra
+                android:name="navigate_to"
+                android:value="manage_bows" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_backup"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_backup"
+        android:shortcutShortLabel="@string/shortcut_backup_short"
+        android:shortcutLongLabel="@string/shortcut_backup_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.seyone.shot"
+            android:targetClass="dev.seyone.shot.MainActivity">
+            <extra
+                android:name="navigate_to"
+                android:value="backup_restore" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_statistics"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_stats"
+        android:shortcutShortLabel="@string/shortcut_statistics_short"
+        android:shortcutLongLabel="@string/shortcut_statistics_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.seyone.shot"
+            android:targetClass="dev.seyone.shot.MainActivity">
+            <extra
+                android:name="navigate_to"
+                android:value="statistics" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

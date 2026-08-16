@@ -26,6 +26,9 @@ interface LocationDao {
     @Query("SELECT * FROM locations ORDER BY isDefault DESC, name ASC")
     fun getAllLocationsStream(): Flow<List<LocationEntity>>
 
+    @Query("SELECT * FROM locations ORDER BY isDefault DESC, name ASC")
+    suspend fun getAllLocationsSync(): List<LocationEntity>
+
     @Query("SELECT * FROM locations WHERE id = :id")
     fun getLocationStream(id: Long): Flow<LocationEntity?>
 }
@@ -47,6 +50,9 @@ interface BowProfileDao {
     @Query("SELECT * FROM bow_profiles ORDER BY isDefault DESC, name ASC")
     fun getAllBowProfilesStream(): Flow<List<BowProfileEntity>>
 
+    @Query("SELECT * FROM bow_profiles ORDER BY isDefault DESC, name ASC")
+    suspend fun getAllBowProfilesSync(): List<BowProfileEntity>
+
     @Query("SELECT * FROM bow_profiles WHERE id = :id")
     fun getBowProfileStream(id: Long): Flow<BowProfileEntity?>
 }
@@ -64,6 +70,9 @@ interface ArrowSetDao {
 
     @Query("SELECT * FROM arrow_sets ORDER BY isDefault DESC, name ASC")
     fun getAllArrowSetsStream(): Flow<List<ArrowSetEntity>>
+
+    @Query("SELECT * FROM arrow_sets ORDER BY isDefault DESC, name ASC")
+    suspend fun getAllArrowSetsSync(): List<ArrowSetEntity>
 
     @Query("SELECT * FROM arrow_sets WHERE id = :id")
     fun getArrowSetStream(id: Long): Flow<ArrowSetEntity?>
@@ -83,4 +92,10 @@ interface BowComponentDao {
     // Gets all parts attached to a specific bow
     @Query("SELECT * FROM bow_components WHERE bowProfileId = :bowId ORDER BY category ASC")
     fun getComponentsForBow(bowId: Long): Flow<List<BowComponentEntity>>
+
+    @Query("SELECT * FROM bow_components ORDER BY category ASC")
+    fun getAllComponentsStream(): Flow<List<BowComponentEntity>>
+
+    @Query("SELECT * FROM bow_components ORDER BY category ASC")
+    suspend fun getAllComponentsSync(): List<BowComponentEntity>
 }

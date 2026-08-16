@@ -9,6 +9,9 @@ import dev.seyone.core.domain.TargetFaceSize
 import dev.seyone.core.domain.model.Arrow
 import dev.seyone.core.domain.model.Distance
 import dev.seyone.core.domain.model.End
+import dev.seyone.core.domain.repository.ArcherRepository
+import dev.seyone.core.domain.repository.BowProfileRepository
+import dev.seyone.core.domain.repository.LocationRepository
 import dev.seyone.core.domain.repository.RoundRepository
 import dev.seyone.core.domain.repository.ScoringRepository
 import dev.seyone.core.domain.repository.SessionRepository
@@ -31,11 +34,25 @@ data class ArrowInput(
     val yCoord: Float? = null
 )
 
+enum class ScoringViewMode {
+    INPUT,
+    SCORESHEET
+}
+
 data class ScoringUiState(
     val title: String = "Loading...",
+    val sessionName: String = "",
+    val archerName: String = "",
+    val locationName: String = "",
+    val bowProfileName: String = "",
+    val sessionDateText: String = "",
     val golds: Int = 0,
+    val tenPlusXCount: Int = 0,
+    val xCount: Int = 0,
     val average: Float = 0.0f,
     val totalScore: Int = 0,
+    val isComplete: Boolean = false,
+    val viewMode: ScoringViewMode = ScoringViewMode.INPUT,
 
     val ends: List<List<ArrowInput>> = listOf(emptyList()),
     val endDbIds: List<Long> = emptyList(),
@@ -64,7 +81,10 @@ class ScoringViewModel(
     private val sessionId: Long,
     private val scoringRepository: ScoringRepository,
     private val sessionRepository: SessionRepository,
-    private val roundRepository: RoundRepository
+    private val roundRepository: RoundRepository,
+    private val locationRepository: LocationRepository,
+    private val bowProfileRepository: BowProfileRepository,
+    private val archerRepository: ArcherRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScoringUiState())
@@ -96,12 +116,29 @@ class ScoringViewModel(
                     roundRepository.getRoundStream(session.roundId).firstOrNull()
 
                 if (roundWithDistances != null) {
-                    // Sort distances to ensure sequence accuracy
                     val sortedDistances = roundWithDistances.distances.sortedBy { it.sequenceOrder }
+
+                    val bowProfile = if (session.bowId != null) {
+                        bowProfileRepository.getBowProfileStream(session.bowId!!).firstOrNull()
+                    } else null
+
+                    val location = if (session.locationId != null) {
+                        locationRepository.getLocationStream(session.locationId!!).firstOrNull()
+                    } else null
+
+                    val primaryArcher = archerRepository.getArchersStream().firstOrNull()?.firstOrNull()
+
+                    val dateFormat = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+                    val formattedDate = dateFormat.format(java.util.Date(session.timestamp))
 
                     _uiState.update { state ->
                         state.copy(
                             title = roundWithDistances.name,
+                            sessionName = session.notes,
+                            archerName = primaryArcher?.name ?: "",
+                            locationName = location?.name ?: "",
+                            bowProfileName = bowProfile?.name ?: "",
+                            sessionDateText = formattedDate,
                             inputMethod = session.inputMethod,
                             distances = sortedDistances
                         )
@@ -382,6 +419,13 @@ class ScoringViewModel(
         }
     }
 
+    fun toggleViewMode() {
+        _uiState.update { state ->
+            val nextMode = if (state.viewMode == ScoringViewMode.INPUT) ScoringViewMode.SCORESHEET else ScoringViewMode.INPUT
+            state.copy(viewMode = nextMode)
+        }
+    }
+
     fun onNextEnd() {
         viewModelScope.launch {
             val state = _uiState.value
@@ -398,7 +442,10 @@ class ScoringViewModel(
         private val sessionId: Long,
         private val scoringRepository: ScoringRepository,
         private val sessionRepository: SessionRepository,
-        private val roundRepository: RoundRepository
+        private val roundRepository: RoundRepository,
+        private val locationRepository: LocationRepository,
+        private val bowProfileRepository: BowProfileRepository,
+        private val archerRepository: ArcherRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -406,7 +453,10 @@ class ScoringViewModel(
                 sessionId,
                 scoringRepository,
                 sessionRepository,
-                roundRepository
+                roundRepository,
+                locationRepository,
+                bowProfileRepository,
+                archerRepository
             ) as T
         }
     }

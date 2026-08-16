@@ -7,6 +7,7 @@ import dev.seyone.core.domain.model.Session
 fun SessionEntity.toDomainModel() = Session(
     id = id,
     roundId = roundId,
+    archerId = archerId,
     bowId = bowId,
     arrowId = arrowId,
     locationId = locationId,
@@ -16,14 +17,12 @@ fun SessionEntity.toDomainModel() = Session(
     arrowsPerEnd = arrowsPerEnd,
     notes = notes,
     timestamp = timestamp
-    // Note: The 'round' and 'ends' properties in the Domain Model default to
-    // null/emptyList(). They get populated later by your UI ViewModels
-    // calling the RoundRepository and ScoringRepository.
 )
 
 fun Session.toEntity() = SessionEntity(
     id = id,
     roundId = roundId,
+    archerId = archerId,
     bowId = bowId,
     arrowId = arrowId,
     locationId = locationId,

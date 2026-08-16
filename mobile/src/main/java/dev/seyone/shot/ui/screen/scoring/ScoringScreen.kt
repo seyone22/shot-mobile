@@ -9,7 +9,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,9 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.seyone.core.domain.repository.ArcherRepository
+import dev.seyone.core.domain.repository.BowProfileRepository
+import dev.seyone.core.domain.repository.LocationRepository
 import dev.seyone.core.domain.repository.RoundRepository
 import dev.seyone.core.domain.repository.ScoringRepository
 import dev.seyone.core.domain.repository.SessionRepository
+import dev.seyone.core.data.repository.ArrowSortOrder
+import dev.seyone.core.data.repository.SettingsRepository
+import dev.seyone.shot.ui.screen.scoring.components.OfficialScoresheetTable
 import dev.seyone.shot.ui.screen.scoring.components.ScoringInputProvider
 import dev.seyone.shot.ui.theme.ArcheryColors
 import java.util.Locale
@@ -34,6 +41,10 @@ fun ScoringScreen(
     scoringRepository: ScoringRepository,
     sessionRepository: SessionRepository,
     roundRepository: RoundRepository,
+    locationRepository: LocationRepository,
+    bowProfileRepository: BowProfileRepository,
+    archerRepository: ArcherRepository,
+    settingsRepository: SettingsRepository,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -42,11 +53,15 @@ fun ScoringScreen(
             sessionId = sessionId,
             scoringRepository = scoringRepository,
             sessionRepository = sessionRepository,
-            roundRepository = roundRepository
+            roundRepository = roundRepository,
+            locationRepository = locationRepository,
+            bowProfileRepository = bowProfileRepository,
+            archerRepository = archerRepository
         )
     )
 
     val state by viewModel.uiState.collectAsState()
+    val userSettings by settingsRepository.settings.collectAsState()
     val listState = rememberLazyListState()
 
     // 1. Get the Android context for the Toast
@@ -104,89 +119,108 @@ fun ScoringScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Notes */ }) {
-                        Icon(Icons.Default.Assignment, contentDescription = "Notes")
+                    IconButton(onClick = { viewModel.toggleViewMode() }) {
+                        Icon(
+                            imageVector = if (state.viewMode == ScoringViewMode.INPUT) {
+                                Icons.AutoMirrored.Filled.Assignment
+                            } else {
+                                Icons.Default.Edit
+                            },
+                            contentDescription = if (state.viewMode == ScoringViewMode.INPUT) {
+                                "View Official Scoresheet"
+                            } else {
+                                "Return to Scoring Entry"
+                            }
+                        )
                     }
                 }
             )
         },
         bottomBar = {
-            Column {
-                // Persistent Summary Bar above the keyboard
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            if (state.viewMode == ScoringViewMode.INPUT) {
+                Column {
+                    // Persistent Summary Bar above the keyboard
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column {
-                            Text(
-                                "Average",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = String.format(Locale.getDefault(), "%.2f", state.average),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        // Small pill for Golds/10s
-                        Surface(
-                            shape = CircleShape,
-                            color = ArcheryColors.Gold,
-                            contentColor = ArcheryColors.GoldText
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Golds: ${state.golds}",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            Column {
+                                Text(
+                                    "Average",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = String.format(Locale.getDefault(), "%.2f", state.average),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                "Total",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = state.totalScore.toString(),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            // Small pill for Golds/10s
+                            Surface(
+                                shape = CircleShape,
+                                color = ArcheryColors.Gold,
+                                contentColor = ArcheryColors.GoldText
+                            ) {
+                                Text(
+                                    text = "Golds: ${state.golds}",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    "Total",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = state.totalScore.toString(),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
-                }
 
-                // The Keyboard / Target Input
-                ScoringInputProvider(
-                    inputMethod = state.inputMethod,
-                    onValueInput = viewModel::onArrowInput,
-                    onTargetInput = viewModel::onTargetInput,
-                    onBackspace = viewModel::onBackspace,
-                    onNextEnd = viewModel::onNextEnd,
-                    state = state
-                )
+                    // The Keyboard / Target Input
+                    ScoringInputProvider(
+                        inputMethod = state.inputMethod,
+                        onValueInput = viewModel::onArrowInput,
+                        onTargetInput = viewModel::onTargetInput,
+                        onBackspace = viewModel::onBackspace,
+                        onNextEnd = viewModel::onNextEnd,
+                        state = state
+                    )
+                }
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        if (state.viewMode == ScoringViewMode.SCORESHEET) {
+            OfficialScoresheetTable(
+                state = state,
+                modifier = Modifier.padding(innerPadding)
+            )
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             // Keep track of our global index across multiple distances
             var currentEndGlobalIndex = 0
 
@@ -233,6 +267,7 @@ fun ScoringScreen(
                         arrows = arrows,
                         arrowsPerEnd = distance.arrowsPerEnd,
                         selectedArrowIndex = if (state.selectedEndIndex == globalIndex) state.selectedArrowIndex else null,
+                        arrowSortOrder = userSettings.arrowSortOrder,
                         onArrowClick = { arrowIdx ->
                             viewModel.selectArrowForEdit(globalIndex, arrowIdx)
                         }
@@ -252,6 +287,7 @@ fun ScoringScreen(
         }
     }
 }
+}
 
 @Composable
 fun EndRow(
@@ -259,8 +295,22 @@ fun EndRow(
     arrows: List<ArrowInput>,
     arrowsPerEnd: Int, // Pass this to know how many slots to draw
     selectedArrowIndex: Int?,
+    arrowSortOrder: ArrowSortOrder = ArrowSortOrder.AS_ENTERED,
     onArrowClick: (Int) -> Unit
 ) {
+    val displaySlots = remember(arrows, arrowsPerEnd, arrowSortOrder) {
+        val sortedPairs = sortIndexedArrows(arrows, arrowSortOrder)
+        val list = mutableListOf<Pair<Int, ArrowInput?>>()
+        for (i in 0 until arrowsPerEnd) {
+            if (i < sortedPairs.size) {
+                list.add(sortedPairs[i])
+            } else {
+                list.add(i to null)
+            }
+        }
+        list
+    }
+
     Surface(
         // Subtle background highlight if this entire row is being edited
         color = if (selectedArrowIndex != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else Color.Transparent,
@@ -283,29 +333,59 @@ fun EndRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Loop through the maximum arrows per end (e.g., 3 or 6)
-                for (i in 0 until arrowsPerEnd) {
-                    val arrow = arrows.getOrNull(i)
-                    val isSelected = selectedArrowIndex == i
+                for (slot in displaySlots) {
+                    val (originalIndex, arrow) = slot
+                    val isSelected = selectedArrowIndex == originalIndex
 
                     ArrowCircle(
                         arrow = arrow,
                         isSelected = isSelected,
-                        onClick = { onArrowClick(i) }
+                        onClick = { onArrowClick(originalIndex) }
                     )
                 }
             }
 
             val endTotal = arrows.sumOf { it.score }
             Text(
-                text = endTotal.toString(),
-                style = MaterialTheme.typography.titleLarge,
+                text = "$endTotal",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.End,
-                modifier = Modifier.width(48.dp)
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
+    }
+}
+
+private fun sortIndexedArrows(
+    arrows: List<ArrowInput>,
+    sortOrder: ArrowSortOrder
+): List<Pair<Int, ArrowInput>> {
+    val indexedPairs = arrows.mapIndexed { idx, arrow -> idx to arrow }
+    if (sortOrder == ArrowSortOrder.AS_ENTERED) {
+        return indexedPairs
+    }
+    return indexedPairs.sortedWith(Comparator { a, b ->
+        val weightA = getArrowValueWeight(a.second.value)
+        val weightB = getArrowValueWeight(b.second.value)
+        weightB.compareTo(weightA)
+    })
+}
+
+private fun getArrowValueWeight(value: String): Int {
+    return when (value.uppercase()) {
+        "X" -> 11
+        "10" -> 10
+        "9" -> 9
+        "8" -> 8
+        "7" -> 7
+        "6" -> 6
+        "5" -> 5
+        "4" -> 4
+        "3" -> 3
+        "2" -> 2
+        "1" -> 1
+        "M", "0" -> 0
+        else -> value.toIntOrNull() ?: -1
     }
 }
 

@@ -311,13 +311,13 @@ fun ArrowSetBottomSheet(
                 )
             }
 
-            // --- Specifications ---
-            Text("Specifications", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // --- Specifications & Inventory ---
+            Text("Specifications & Inventory", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = spine,
                     onValueChange = { spine = it },
-                    label = { Text("Spine") },
+                    label = { Text("Spine", maxLines = 1) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     singleLine = true
@@ -325,41 +325,38 @@ fun ArrowSetBottomSheet(
                 OutlinedTextField(
                     value = length,
                     onValueChange = { length = it },
-                    label = { Text("Length (\")") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = weight,
-                    onValueChange = { weight = it },
-                    label = { Text("Weight (gn)") },
+                    label = { Text("Length (in)", maxLines = 1) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                     singleLine = true
                 )
             }
-
-            // --- Inventory & Purchase ---
-            Text("Inventory", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it },
+                    label = { Text("Weight (gn)", maxLines = 1) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
-                    label = { Text("Arrow Count") },
+                    label = { Text("Arrow Count", maxLines = 1) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     singleLine = true
                 )
-                OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Total Cost ($)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
             }
+            OutlinedTextField(
+                value = price,
+                onValueChange = { price = it },
+                label = { Text("Total Cost ($)", maxLines = 1) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
 
             OutlinedTextField(
                 value = notes,
@@ -385,19 +382,20 @@ fun ArrowSetBottomSheet(
                     onSave(
                         ArrowSet(
                             id = initialArrowSet?.id ?: 0L,
-                            name = name,
-                            manufacturer = manufacturer,
-                            model = model,
+                            name = name.trim(),
+                            manufacturer = manufacturer.trim(),
+                            model = model.trim(),
                             spine = spine.toIntOrNull(),
                             lengthInches = length.toFloatOrNull(),
                             weightGrains = weight.toFloatOrNull(),
-                            quantity = quantity.toIntOrNull() ?: 0,
-                            shotCount = initialArrowSet?.shotCount ?: 0, // Preserve shot count on edit
+                            quantity = quantity.toIntOrNull() ?: 12,
+                            shotCount = initialArrowSet?.shotCount ?: 0,
                             purchasePrice = price.toDoubleOrNull(),
-                            notes = notes,
+                            notes = notes.trim(),
                             isDefault = isDefault
                         )
                     )
+                    onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = name.isNotBlank()

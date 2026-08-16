@@ -16,4 +16,5 @@ dependencies {
     // No Android dependencies here!
     // Only pure Kotlin libraries if needed (e.g., Coroutines for Suspend functions)
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.junit)
 }

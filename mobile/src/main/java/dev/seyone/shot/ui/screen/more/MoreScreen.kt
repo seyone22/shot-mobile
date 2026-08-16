@@ -13,13 +13,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MoreScreen(
     onNavigateToArchers: () -> Unit,
     onNavigateToBows: () -> Unit,
     onNavigateToArrows: () -> Unit,
     onNavigateToLocations: () -> Unit,
+    onNavigateToSightMarks: () -> Unit,
+    onNavigateToBackup: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -28,7 +31,7 @@ fun MoreScreen(
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
+            LargeFlexibleTopAppBar(
                 title = { Text("More") },
                 scrollBehavior = scrollBehavior
             )
@@ -61,6 +64,11 @@ fun MoreScreen(
                 icon = Icons.Outlined.Place,
                 onClick = onNavigateToLocations
             )
+            MoreItem(
+                label = "Sight Marks",
+                icon = Icons.Outlined.TrackChanges,
+                onClick = onNavigateToSightMarks
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -68,26 +76,20 @@ fun MoreScreen(
             MoreItem(
                 label = "Backup and Restore",
                 icon = Icons.Outlined.CloudUpload,
-                onClick = { /* TODO */ }
+                onClick = onNavigateToBackup
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-
             MoreItem(
                 label = "General Settings",
                 icon = Icons.Outlined.Settings,
-                onClick = { /* TODO */ }
+                onClick = onNavigateToSettings
             )
             MoreItem(
                 label = "About",
                 icon = Icons.Outlined.Info,
-                onClick = onNavigateToAbout // Add this callback to your MoreScreen params
-            )
-            MoreItem(
-                label = "Help & Feedback",
-                icon = Icons.Outlined.HelpOutline,
-                onClick = { /* TODO */ }
+                onClick = onNavigateToAbout
             )
 
             Spacer(modifier = Modifier.height(32.dp))

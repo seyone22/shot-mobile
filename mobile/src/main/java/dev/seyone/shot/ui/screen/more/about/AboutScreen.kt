@@ -18,8 +18,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.outlined.TrackChanges
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
+import com.seyone22.shot.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +55,15 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             // Hero Section
-            Text(text = "🏹", fontSize = 80.sp)
+            Icon(
+                imageVector = Icons.Outlined.TrackChanges,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Shot",
+                text = "Shot Mobile",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -66,7 +74,7 @@ fun AboutScreen(
             // --- Version & Updates ---
             AboutPreferenceItem(
                 title = "Version",
-                subtitle = "Stable 0.1.0 (March 15, 2026)",
+                subtitle = stringResource(R.string.app_version_full),
                 onClick = { /* Could copy to clipboard */ }
             )
 

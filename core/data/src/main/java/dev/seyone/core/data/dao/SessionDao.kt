@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SessionDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: SessionEntity): Long
 
     @Query("SELECT * FROM sessions ORDER BY timestamp DESC")
@@ -28,6 +28,9 @@ interface SessionDao {
 
     @Query("SELECT * FROM sessions ORDER BY timestamp DESC")
     fun getAllSessionsStream(): Flow<List<SessionEntity>>
+
+    @Query("SELECT * FROM sessions ORDER BY timestamp DESC")
+    suspend fun getAllSessionsSync(): List<SessionEntity>
 
     @Query("SELECT * FROM sessions WHERE id = :id")
     fun getSessionStream(id: Long): Flow<SessionEntity?>

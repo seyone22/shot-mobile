@@ -11,6 +11,7 @@ import dev.seyone.shot.ui.screen.more.arrow.ArrowEquipmentViewModel
 import dev.seyone.shot.ui.screen.more.bow.BowEquipmentViewModel
 import dev.seyone.shot.ui.screen.more.bow.BowDetailViewModel
 import dev.seyone.shot.ui.screen.more.location.LocationViewModel
+import dev.seyone.shot.ui.screen.more.sight.SightMarksViewModel
 import dev.seyone.shot.ui.screen.statistics.StatisticsViewModel
 import dev.seyone.shot.ui.screen.session.SessionViewModel
 
@@ -21,7 +22,12 @@ object AppViewModelProvider {
             SessionViewModel(
                 sessionRepository = shotApplication().container.sessionRepository,
                 roundRepository = shotApplication().container.roundRepository,
-                scoringRepository = shotApplication().container.scoringRepository
+                scoringRepository = shotApplication().container.scoringRepository,
+                locationRepository = shotApplication().container.locationRepository,
+                bowProfileRepository = shotApplication().container.bowProfileRepository,
+                arrowSetRepository = shotApplication().container.arrowSetRepository,
+                archerRepository = shotApplication().container.archerRepository,
+                settingsRepository = shotApplication().container.settingsRepository
             )
         }
         initializer {
@@ -51,6 +57,13 @@ object AppViewModelProvider {
         initializer {
             LocationViewModel(
                 locationRepository = shotApplication().container.locationRepository
+            )
+        }
+        initializer {
+            SightMarksViewModel(
+                sightMarkRepository = shotApplication().container.sightMarkRepository,
+                bowProfileRepository = shotApplication().container.bowProfileRepository,
+                arrowSetRepository = shotApplication().container.arrowSetRepository
             )
         }
     }

@@ -13,6 +13,9 @@ interface ArcherDao {
     @Query("SELECT * FROM archers ORDER BY name ASC")
     fun getAllArchers(): Flow<List<ArcherEntity>>
 
+    @Query("SELECT * FROM archers ORDER BY name ASC")
+    suspend fun getAllArchersSync(): List<ArcherEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArcher(archer: ArcherEntity): Long
 

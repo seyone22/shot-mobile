@@ -20,6 +20,7 @@ import dev.seyone.core.domain.SessionType
 data class SessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val roundId: Long,
+    val archerId: Long? = null,
     val bowId: Long?,      // Nullable for now
     val arrowId: Long?,    // Nullable for now
     val locationId: Long?, // Nullable for now

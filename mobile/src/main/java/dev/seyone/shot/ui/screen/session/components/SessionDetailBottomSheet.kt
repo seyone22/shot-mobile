@@ -52,6 +52,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material.icons.outlined.PlayArrow
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionSummaryBottomSheet(
@@ -59,7 +61,8 @@ fun SessionSummaryBottomSheet(
     roundName: String,
     summaryData: SessionSummaryData?, // Passed in from ViewModel
     onDismiss: () -> Unit,
-    onEditClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onEditDetailsClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onNotesClick: () -> Unit
 ) {
@@ -83,8 +86,8 @@ fun SessionSummaryBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                ActionIcon(Icons.Outlined.Share, "Share", onClick = { /* TODO */ })
-                ActionIcon(Icons.Outlined.Edit, "Resume", onClick = onEditClick)
+                ActionIcon(Icons.Outlined.PlayArrow, "Resume", onClick = onResumeClick)
+                ActionIcon(Icons.Outlined.Edit, "Edit", onClick = onEditDetailsClick)
                 ActionIcon(Icons.Outlined.Notes, "Notes", onClick = onNotesClick)
                 ActionIcon(Icons.Outlined.Delete, "Trash", onClick = onDeleteClick)
             }

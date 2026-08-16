@@ -24,6 +24,10 @@ interface RoundDao {
     fun getAllRoundsWithDistances(): Flow<List<RoundWithDistances>>
 
     @Transaction
+    @Query("SELECT * FROM rounds")
+    suspend fun getAllRoundsWithDistancesSync(): List<RoundWithDistances>
+
+    @Transaction
     @Query("SELECT * FROM rounds WHERE id = :roundId")
     fun getRoundWithDistancesById(roundId: Long): Flow<RoundWithDistances?>
 

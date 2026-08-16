@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,6 +23,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ElevatedCard
@@ -44,12 +54,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -184,26 +196,69 @@ fun StatisticsScreen(
 
             // --- 3. Score Distribution (Vico Column Chart) ---
             item {
-                Text("Score Breakdown", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                ScoreDistributionChart(uiState.scoreDistribution, uiState.totalArrowsShot)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Score Breakdown",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${uiState.totalArrowsShot} arrows total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        ScoreDistributionChart(uiState.scoreDistribution, uiState.totalArrowsShot)
+                    }
+                }
             }
 
-            // --- 4. Daily Arrow Volume Chart (Vico Column Chart) ---
-            if (uiState.dailyStats.isNotEmpty()) {
-                item {
-                    Text("Daily Arrow Volume", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    VolumeTrendChart(uiState.dailyStats)
-                }
+            // --- 4. Daily Arrow Volume Heatmap (GitHub Contribution Style) ---
+            item {
+                GitHubContributionHeatmap(uiState.dailyStats)
             }
 
             // --- 5. Daily Average Chart (Vico Line Chart) ---
             if (uiState.dailyStats.size >= 2) {
                 item {
-                    Text("Daily Average Trend", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AverageTrendChart(uiState.dailyStats)
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Daily Average Trend",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            AverageTrendChart(uiState.dailyStats)
+                        }
+                    }
                 }
             }
         }
@@ -398,39 +453,270 @@ fun ScoreDistributionChart(distribution: Map<String, Int>, totalArrows: Int) {
 }
 
 @Composable
-fun VolumeTrendChart(dailyStats: List<DailyStat>) {
-    val modelProducer = remember { CartesianChartModelProducer() }
+fun GitHubContributionHeatmap(
+    dailyStats: List<DailyStat>,
+    modifier: Modifier = Modifier
+) {
+    val isDark = isSystemInDarkTheme()
+    val scrollState = rememberScrollState()
 
-    LaunchedEffect(dailyStats) {
-        modelProducer.runTransaction {
-            columnSeries { series(dailyStats.map { it.totalArrows }) }
-        }
+    val statsMap = remember(dailyStats) {
+        dailyStats.associate { it.dateMs to it.totalArrows }
     }
 
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(
-                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                    rememberLineComponent(
-                        fill = Fill(MaterialTheme.colorScheme.primary),
-                        thickness = 12.dp,
-                        shape = RectangleShape
+    val (weeks, monthLabels) = remember(statsMap) {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        while (calendar.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        val weekList = mutableListOf<List<HeatmapCellData>>()
+        val monthLabelList = mutableListOf<Pair<Int, String>>()
+        val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
+
+        val tempCal = calendar.clone() as Calendar
+        tempCal.add(Calendar.DAY_OF_YEAR, -(52 * 7 - 1))
+
+        var lastMonth = -1
+
+        for (weekIdx in 0 until 52) {
+            val daysInWeek = mutableListOf<HeatmapCellData>()
+            for (dayIdx in 0 until 7) {
+                val currentMonth = tempCal.get(Calendar.MONTH)
+                if (dayIdx == 0 && currentMonth != lastMonth) {
+                    monthLabelList.add(Pair(weekIdx, monthFormat.format(tempCal.time)))
+                    lastMonth = currentMonth
+                }
+
+                val dayMs = tempCal.timeInMillis
+                val count = statsMap[dayMs] ?: 0
+                val level = when {
+                    count == 0 -> 0
+                    count <= 24 -> 1
+                    count <= 48 -> 2
+                    count <= 96 -> 3
+                    else -> 4
+                }
+
+                daysInWeek.add(
+                    HeatmapCellData(
+                        dateMs = dayMs,
+                        dateString = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(tempCal.time),
+                        arrowCount = count,
+                        level = level
                     )
                 )
-            ),
-            startAxis = VerticalAxis.rememberStart(
-                valueFormatter = { _, value, _ -> value.toInt().toString() }
-            ),
-            bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = { _, value, _ -> "Day ${value.toInt() + 1}" }
-            ),
-            marker = rememberMarker() // <-- Added Tooltip!
+
+                tempCal.add(Calendar.DAY_OF_YEAR, 1)
+            }
+            weekList.add(daysInWeek)
+        }
+
+        Pair(weekList, monthLabelList)
+    }
+
+    var selectedCell by remember { mutableStateOf<HeatmapCellData?>(null) }
+
+    LaunchedEffect(weeks) {
+        scrollState.scrollTo(scrollState.maxValue)
+    }
+
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        modelProducer = modelProducer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-    )
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Daily Arrow Volume",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                selectedCell?.let { cell ->
+                    val label = if (cell.arrowCount == 1) "1 arrow" else "${cell.arrowCount} arrows"
+                    Text(
+                        text = "$label on ${cell.dateString}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                } ?: run {
+                    val totalArrows = dailyStats.sumOf { it.totalArrows }
+                    Text(
+                        text = "$totalArrows arrows total",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = 22.dp, end = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    val dayLabels = listOf("", "Mon", "", "Wed", "", "Fri", "")
+                    dayLabels.forEach { dayLabel ->
+                        Box(
+                            modifier = Modifier.size(height = 12.dp, width = 24.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            if (dayLabel.isNotEmpty()) {
+                                Text(
+                                    text = dayLabel,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(scrollState)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .height(20.dp)
+                                .padding(bottom = 2.dp)
+                        ) {
+                            var currentColumn = 0
+                            for (monthPair in monthLabels) {
+                                val (weekIndex, monthName) = monthPair
+                                val spacerWidth = ((weekIndex - currentColumn) * 15).dp
+                                if (spacerWidth > 0.dp) {
+                                    Spacer(modifier = Modifier.width(spacerWidth))
+                                }
+                                Text(
+                                    text = monthName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(45.dp)
+                                )
+                                currentColumn = weekIndex + 3
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            for (week in weeks) {
+                                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    for (cell in week) {
+                                        val cellColor = getHeatmapColor(cell.level, isDark)
+                                        val isSelected = selectedCell == cell
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(cellColor)
+                                                .then(
+                                                    if (isSelected) Modifier.border(
+                                                        1.5.dp,
+                                                        MaterialTheme.colorScheme.primary,
+                                                        RoundedCornerShape(3.dp)
+                                                    ) else Modifier
+                                                )
+                                                .clickable { selectedCell = cell }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Daily activity heatmap",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Less",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    for (lvl in 0..4) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(getHeatmapColor(lvl, isDark))
+                        )
+                    }
+                    Text(
+                        text = "More",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class HeatmapCellData(
+    val dateMs: Long,
+    val dateString: String,
+    val arrowCount: Int,
+    val level: Int
+)
+
+private fun getHeatmapColor(level: Int, isDark: Boolean): Color {
+    return if (isDark) {
+        when (level) {
+            0 -> Color(0xFF161B22)
+            1 -> Color(0xFF0E4429)
+            2 -> Color(0xFF006D32)
+            3 -> Color(0xFF26A641)
+            else -> Color(0xFF39D353)
+        }
+    } else {
+        when (level) {
+            0 -> Color(0xFFEBEDF0)
+            1 -> Color(0xFF9BE9A8)
+            2 -> Color(0xFF40C463)
+            3 -> Color(0xFF30A14E)
+            else -> Color(0xFF216E39)
+        }
+    }
 }
 
 @Composable

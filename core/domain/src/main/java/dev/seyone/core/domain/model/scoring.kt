@@ -27,6 +27,7 @@ data class End(
 data class Session(
     val id: Long = 0,
     val roundId: Long,
+    val archerId: Long? = null,
     val bowId: Long? = null,
     val arrowId: Long? = null,
     val locationId: Long? = null,

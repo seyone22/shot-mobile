@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -41,8 +42,21 @@ import androidx.navigation.navArgument
 import dev.seyone.shot.di.AppContainer
 import dev.seyone.shot.ui.screen.more.about.AboutScreen
 import dev.seyone.shot.ui.screen.more.archer.ArchersListScreen
+import dev.seyone.shot.ui.screen.more.backup.BackupRestoreScreen
 import dev.seyone.shot.ui.screen.more.bow.BowEquipmentScreen
+import dev.seyone.shot.ui.screen.more.sight.SightMarksScreen
+import dev.seyone.shot.ui.screen.more.settings.GeneralSettingsScreen
+import dev.seyone.core.data.repository.AppThemeMode
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
 import dev.seyone.shot.ui.screen.more.MoreScreen
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
 import dev.seyone.shot.ui.screen.more.about.WhatsNewScreen
 import dev.seyone.shot.ui.screen.more.arrow.ArrowEquipmentScreen
 import dev.seyone.shot.ui.screen.more.bow.BowDetailScreen
@@ -59,7 +73,13 @@ class MainActivity : ComponentActivity() {
         val appContainer = (application as ShotApplication).container
         enableEdgeToEdge()
         setContent {
-            ShotTheme {
+            val settings by appContainer.settingsRepository.settings.collectAsState()
+            val useDarkTheme = when (settings.themeMode) {
+                AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.DARK -> true
+            }
+            ShotTheme(darkTheme = useDarkTheme) {
                 ShotApp(appContainer = appContainer)
             }
         }
@@ -81,6 +101,32 @@ fun ShotApp(
         NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
     } else {
         NavigationSuiteType.None
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val activity = context as? android.app.Activity
+        val target = activity?.intent?.getStringExtra("navigate_to")
+        when (target) {
+            "quick_start" -> {
+                navController.navigate(TopLevelDestination.SESSION.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                }
+            }
+            "statistics" -> {
+                navController.navigate(TopLevelDestination.STATISTICS.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                }
+            }
+            "manage_bows" -> {
+                navController.navigate("manage_bows")
+            }
+            "backup_restore" -> {
+                navController.navigate("backup_restore")
+            }
+        }
     }
 
     NavigationSuiteScaffold(
@@ -111,7 +157,31 @@ fun ShotApp(
         NavHost(
             navController = navController,
             startDestination = TopLevelDestination.SESSION.route,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(300)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(300)
+                )
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                )
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(300)
+                )
+            }
         ) {
             // --- TOP LEVEL DESTINATIONS ---
             composable(TopLevelDestination.SESSION.route) {
@@ -132,6 +202,9 @@ fun ShotApp(
                     onNavigateToBows = { navController.navigate("manage_bows") },
                     onNavigateToArrows = { navController.navigate("manage_arrows") },
                     onNavigateToLocations = { navController.navigate("manage_locations") },
+                    onNavigateToSightMarks = { navController.navigate("sight_marks") },
+                    onNavigateToBackup = { navController.navigate("backup_restore") },
+                    onNavigateToSettings = { navController.navigate("general_settings") },
                     onNavigateToAbout = { navController.navigate("about") }
                 )
             }
@@ -147,6 +220,10 @@ fun ShotApp(
                     scoringRepository = appContainer.scoringRepository,
                     sessionRepository = appContainer.sessionRepository,
                     roundRepository = appContainer.roundRepository,
+                    locationRepository = appContainer.locationRepository,
+                    bowProfileRepository = appContainer.bowProfileRepository,
+                    archerRepository = appContainer.archerRepository,
+                    settingsRepository = appContainer.settingsRepository,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -191,15 +268,36 @@ fun ShotApp(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+            composable("sight_marks") {
+                SightMarksScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("backup_restore") {
+                BackupRestoreScreen(
+                    backupRepository = appContainer.backupRepository,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("general_settings") {
+                GeneralSettingsScreen(
+                    settingsRepository = appContainer.settingsRepository,
+                    roundRepository = appContainer.roundRepository,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
             composable("what_new") {
                 WhatsNewScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable("about") {
-                AboutScreen(onNavigateBack = { navController.popBackStack() },
+                AboutScreen(
+                    onNavigateBack = { navController.popBackStack() },
                     onNavigateToWhatNew = { navController.navigate("what_new") }
-                    )
+                )
             }
         }
     }
@@ -221,5 +319,31 @@ enum class TopLevelDestination(
 fun PlaceholderScreen(title: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = title, style = MaterialTheme.typography.headlineMedium)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubScreenPlaceholder(title: String, onNavigateBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = title, style = MaterialTheme.typography.headlineMedium)
+        }
     }
 }

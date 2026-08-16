@@ -21,7 +21,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +69,11 @@ fun SessionScreen(
     val sessions by viewModel.filteredSessionList.collectAsState()
     val availableRounds by viewModel.availableRounds.collectAsState()
     val summaryData by viewModel.sessionSummary.collectAsState()
+    val savedLocations by viewModel.locations.collectAsState()
+    val savedBowProfiles by viewModel.bowProfiles.collectAsState()
+    val savedArchers by viewModel.archers.collectAsState()
+    val savedArrowSets by viewModel.arrowSets.collectAsState()
+    val userSettings by viewModel.userSettings.collectAsState()
 
     // Search State
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
@@ -83,8 +90,10 @@ fun SessionScreen(
     // Bottom Sheet & Dialog States
     var showNewSessionSheet by rememberSaveable { mutableStateOf(false) }
     var selectedSessionForSummary by remember { mutableStateOf<Session?>(null) }
+    var editingSession by remember { mutableStateOf<Session?>(null) }
     var showNotesDialogFor by remember { mutableStateOf<Session?>(null) }
     var sessionToDelete by remember { mutableStateOf<Session?>(null) }
+    val truncationWarning by viewModel.truncationWarning.collectAsState()
 
     Scaffold(modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection), topBar = {
         if (isSearchActive) {
@@ -149,15 +158,15 @@ fun SessionScreen(
                             expanded = showFilterMenu,
                             onDismissRequest = { showFilterMenu = false }) {
                             DropdownMenuItem(text = { Text("All Sessions") }, onClick = {
-                                viewModel.updateFilter(null)
+                                viewModel.updateSelectedFilter("All")
                                 showFilterMenu = false
                             })
                             DropdownMenuItem(text = { Text("Practice Only") }, onClick = {
-                                viewModel.updateFilter(SessionType.PRACTICE)
+                                viewModel.updateSelectedFilter("Practice")
                                 showFilterMenu = false
                             })
                             DropdownMenuItem(text = { Text("Competition Only") }, onClick = {
-                                viewModel.updateFilter(SessionType.COMPETITION)
+                                viewModel.updateSelectedFilter("Competition")
                                 showFilterMenu = false
                             })
                         }
@@ -213,15 +222,59 @@ fun SessionScreen(
         if (showNewSessionSheet) {
             NewSessionDialog(
                 rounds = availableRounds,
+                savedLocations = savedLocations,
+                savedBows = savedBowProfiles,
+                savedArchers = savedArchers,
+                savedArrowSets = savedArrowSets,
+                defaultRoundId = userSettings.defaultRoundId,
+                onSaveLocation = { viewModel.saveLocation(it) },
+                onSaveBow = { viewModel.saveBowProfile(it) },
+                onSaveArcher = { viewModel.saveArcher(it) },
+                onSaveArrowSet = { viewModel.saveArrowSet(it) },
                 onDismiss = { showNewSessionSheet = false },
-                onStartSession = { roundId, type, method, archers, arrows ->
+                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName ->
                     showNewSessionSheet = false
                     viewModel.startNewSession(
-                        roundId, type, method, archers, arrows
+                        roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName
                     ) { newSessionId ->
                         onNavigateToScoring(newSessionId)
                     }
                 })
+        }
+
+        editingSession?.let { sessionToEdit ->
+            NewSessionDialog(
+                rounds = availableRounds,
+                savedLocations = savedLocations,
+                savedBows = savedBowProfiles,
+                savedArchers = savedArchers,
+                savedArrowSets = savedArrowSets,
+                defaultRoundId = userSettings.defaultRoundId,
+                onSaveLocation = { viewModel.saveLocation(it) },
+                onSaveBow = { viewModel.saveBowProfile(it) },
+                onSaveArcher = { viewModel.saveArcher(it) },
+                onSaveArrowSet = { viewModel.saveArrowSet(it) },
+                initialSession = sessionToEdit,
+                onDismiss = { editingSession = null },
+                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName ->
+                    viewModel.updateSessionDetails(
+                        existingSession = sessionToEdit,
+                        newRoundId = roundId,
+                        newSessionType = type,
+                        newInputMethod = method,
+                        newArchers = archers,
+                        newArrowsPerEnd = arrows,
+                        newSessionName = sessionName,
+                        newBowName = bowName,
+                        newLocationName = locationName,
+                        newArcherName = archerName,
+                        newArrowName = arrowName,
+                        onComplete = {
+                            editingSession = null
+                        }
+                    )
+                }
+            )
         }
 
         selectedSessionForSummary?.let { sessionToSummarize ->
@@ -237,9 +290,16 @@ fun SessionScreen(
                     selectedSessionForSummary = null
                     viewModel.clearSessionSummary()
                 },
-                onEditClick = {
+                onResumeClick = {
+                    val idToResume = sessionToSummarize.id
                     selectedSessionForSummary = null
-                    onNavigateToScoring(sessionToSummarize.id)
+                    viewModel.clearSessionSummary()
+                    onNavigateToScoring(idToResume)
+                },
+                onEditDetailsClick = {
+                    editingSession = sessionToSummarize
+                    selectedSessionForSummary = null
+                    viewModel.clearSessionSummary()
                 },
                 onDeleteClick = {
                     sessionToDelete = sessionToSummarize
@@ -250,6 +310,35 @@ fun SessionScreen(
                     selectedSessionForSummary = null
                 })
         }
+    }
+
+    // Truncation Warning Confirmation Dialog
+    truncationWarning?.let { warning ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearTruncationWarning() },
+            title = {
+                Text("Truncate Session Data?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(warning.message)
+            },
+            confirmButton = {
+                Button(
+                    onClick = { warning.onConfirm() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Truncate & Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.clearTruncationWarning() }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // --- 3. Dialogs ---

@@ -34,7 +34,7 @@ fun ScoringKeypad(
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth()
-                .height(260.dp), // <--- THE FIX: Explicit height constraint
+                .height(220.dp), // <--- THE FIX: Explicit height constraint
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Col 1: X, 7, 3

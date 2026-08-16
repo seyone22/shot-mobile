@@ -21,9 +21,10 @@ import dev.seyone.core.data.entity.*
         LocationEntity::class,
         BowProfileEntity::class,
         ArrowSetEntity::class,
-        BowComponentEntity::class
+        BowComponentEntity::class,
+        SightMarkEntity::class
     ],
-    version = 9, // <-- Bumped to 8 for Arrow Tracking updates
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(ShotTypeConverters::class)
@@ -37,6 +38,7 @@ abstract class ShotDatabase : RoomDatabase() {
     abstract fun bowProfileDao(): BowProfileDao
     abstract fun arrowSetDao(): ArrowSetDao
     abstract fun bowComponentDao(): BowComponentDao
+    abstract fun sightMarkDao(): SightMarkDao
 
     companion object {
         @Volatile
@@ -104,36 +106,105 @@ abstract class ShotDatabase : RoomDatabase() {
         }
 
         // --- MIGRATION 7 to 8 ---
-        // Adds lengthInches, shotCount, and purchasePrice to arrow_sets
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add lengthInches (Nullable REAL) [cite: 16]
                 db.execSQL("ALTER TABLE `arrow_sets` ADD COLUMN `lengthInches` REAL")
-
-                // Add shotCount (Non-null INTEGER, default 0 for fatigue tracking)
                 db.execSQL("ALTER TABLE `arrow_sets` ADD COLUMN `shotCount` INTEGER NOT NULL DEFAULT 0")
-
-                // Add purchasePrice (Nullable REAL/Double)
                 db.execSQL("ALTER TABLE `arrow_sets` ADD COLUMN `purchasePrice` REAL")
             }
         }
 
         // --- MIGRATION 8 to 9 ---
-        // Adds new default rounds for existing users
         private val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 val waIn = "WA (Indoor)"
-
-                // ID 20: WA 18m (Recurve - Triple Spot)
                 db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (20, 'WA 18m (Recurve - Triple Spot)', '$waIn', 'METRIC_10_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (20, 1, 18, 'METERS', 3, 20, 'CM_40_TRIPLE')")
+            }
+        }
+
+        // --- MIGRATION 9 to 10 ---
+        // Adds WA 30m (360), WA 60m, WA 50m Barebow, Short Metric, NFAA Indoor 300, etc.
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val waOut = "WA (Outdoor)"
+                val waIn = "WA (Indoor)"
+                val gbMet = "Archery GB (Metric)"
+                val usa = "NFAA / USA Archery"
+
+                // ID 21: WA 30m (360) - 30m (6 ends x 6 arrows = 36 arrows)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (21, 'WA 30m (360)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (21, 1, 30, 'METERS', 6, 6, 'CM_80')")
+
+                // ID 22: WA 60m (Masters / U18 Recurve)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (22, 'WA 60m (Masters/U18)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (22, 1, 60, 'METERS', 6, 12, 'CM_122')")
+
+                // ID 23: WA 50m (Barebow)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (23, 'WA 50m (Barebow)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (23, 1, 50, 'METERS', 6, 12, 'CM_122')")
+
+                // ID 24: WA 18m Half Round (30 Arrows)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (24, 'WA 18m Half Round', '$waIn', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (24, 1, 18, 'METERS', 3, 10, 'CM_40')")
+
+                // ID 25: Short Metric (72 Arrows)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (25, 'Short Metric', '$gbMet', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (25, 1, 50, 'METERS', 6, 6, 'CM_80')")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (25, 2, 30, 'METERS', 6, 6, 'CM_80')")
+
+                // ID 26: NFAA Indoor 300
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (26, 'NFAA Indoor 300', '$usa', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (26, 1, 18, 'METERS', 5, 12, 'CM_40')")
+
+                // ID 27: 30m Practice (36 Arrows)
+                db.execSQL("INSERT OR IGNORE INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (27, '30m Practice (36 Arrows)', 'Practice', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT OR IGNORE INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (27, 1, 30, 'METERS', 6, 6, 'CM_80')")
+            }
+        }
+
+        // --- MIGRATION 10 to 11 ---
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `sessions` ADD COLUMN `archerId` INTEGER DEFAULT NULL")
+            }
+        }
+
+        // --- MIGRATION 11 to 12 ---
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `sight_marks` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `bowProfileId` INTEGER NOT NULL,
+                        `arrowSetId` INTEGER,
+                        `drawWeightLbs` REAL,
+                        `distanceValue` REAL NOT NULL,
+                        `distanceUnit` TEXT NOT NULL,
+                        `elevationMark` REAL NOT NULL,
+                        `windageMark` REAL,
+                        `notes` TEXT NOT NULL,
+                        FOREIGN KEY(`bowProfileId`) REFERENCES `bow_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sight_marks_bowProfileId` ON `sight_marks` (`bowProfileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sight_marks_arrowSetId` ON `sight_marks` (`arrowSetId`)")
             }
         }
 
         fun getDatabase(context: Context): ShotDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, ShotDatabase::class.java, "shot_database")
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9) // <-- Added MIGRATION_7_8
+                    .addMigrations(
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12
+                    )
+                    .fallbackToDestructiveMigration()
                     .addCallback(DatabasePrepopulateCallback())
                     .build().also { Instance = it }
             }
@@ -152,7 +223,7 @@ abstract class ShotDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (1, 'WA 1440 (90m)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (1, 1, 90, 'METERS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (1, 2, 70, 'METERS', 6, 6, 'CM_122')")
-                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (1, 3, 50, 'METERS', 6, 6, 'CM_80')") // Usually 3 arrows, but some WA shoots do 6. We'll use 6 arrows x 6 ends for 36 total.
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (1, 3, 50, 'METERS', 6, 6, 'CM_80')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (1, 4, 30, 'METERS', 6, 6, 'CM_80')")
 
                 // ID 2: WA 1440 (70m) - Women / Master Men
@@ -176,6 +247,18 @@ abstract class ShotDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (5, 2, 50, 'METERS', 6, 5, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (5, 3, 40, 'METERS', 6, 5, 'CM_122')")
 
+                // ID 21: WA 30m (360)
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (21, 'WA 30m (360)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (21, 1, 30, 'METERS', 6, 6, 'CM_80')")
+
+                // ID 22: WA 60m (Masters/U18)
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (22, 'WA 60m (Masters/U18)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (22, 1, 60, 'METERS', 6, 12, 'CM_122')")
+
+                // ID 23: WA 50m (Barebow)
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (23, 'WA 50m (Barebow)', '$waOut', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (23, 1, 50, 'METERS', 6, 12, 'CM_122')")
+
                 // ==========================================
                 // 2. WORLD ARCHERY (INDOOR)
                 // ==========================================
@@ -198,9 +281,16 @@ abstract class ShotDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (9, 1, 25, 'METERS', 3, 20, 'CM_60')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (9, 2, 18, 'METERS', 3, 20, 'CM_40')")
 
+                // ID 20: WA 18m (Recurve - Triple Spot)
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (20, 'WA 18m (Recurve - Triple Spot)', '$waIn', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (20, 1, 18, 'METERS', 3, 20, 'CM_40_TRIPLE')")
+
+                // ID 24: WA 18m Half Round
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (24, 'WA 18m Half Round', '$waIn', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (24, 1, 18, 'METERS', 3, 10, 'CM_40')")
+
                 // ==========================================
                 // 3. ARCHERY GB / GNAS (IMPERIAL)
-                // 5-zone scoring (9, 7, 5, 3, 1) usually shot on a 122cm target face
                 // ==========================================
                 val gbImp = "Archery GB (Imperial)"
 
@@ -210,71 +300,79 @@ abstract class ShotDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (10, 2, 80, 'YARDS', 6, 8, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (10, 3, 60, 'YARDS', 6, 4, 'CM_122')")
 
-                // ID 11: Hereford / Bristol I (144 arrows)
+                // ID 11: Hereford / Bristol I
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (11, 'Hereford / Bristol I', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (11, 1, 80, 'YARDS', 6, 12, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (11, 2, 60, 'YARDS', 6, 8, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (11, 3, 50, 'YARDS', 6, 4, 'CM_122')")
 
-                // ID 12: Albion (108 arrows)
+                // ID 12: Albion
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (12, 'Albion', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (12, 1, 80, 'YARDS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (12, 2, 60, 'YARDS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (12, 3, 50, 'YARDS', 6, 6, 'CM_122')")
 
-                // ID 13: Windsor (108 arrows)
+                // ID 13: Windsor
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (13, 'Windsor', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (13, 1, 60, 'YARDS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (13, 2, 50, 'YARDS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (13, 3, 40, 'YARDS', 6, 6, 'CM_122')")
 
-                // ID 14: Western (96 arrows)
+                // ID 14: Western
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (14, 'Western', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (14, 1, 60, 'YARDS', 6, 8, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (14, 2, 50, 'YARDS', 6, 8, 'CM_122')")
 
-                // ID 15: National (72 arrows)
+                // ID 15: National
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (15, 'National', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (15, 1, 60, 'YARDS', 6, 8, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (15, 2, 50, 'YARDS', 6, 4, 'CM_122')")
 
-                // ID 16: Warwick (48 arrows)
+                // ID 16: Warwick
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (16, 'Warwick', '$gbImp', 'IMPERIAL_5_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (16, 1, 60, 'YARDS', 6, 4, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (16, 2, 50, 'YARDS', 6, 4, 'CM_122')")
 
                 // ==========================================
                 // 4. ARCHERY GB / GNAS (METRIC)
-                // 10-zone scoring, effectively shorter WA 1440s
                 // ==========================================
                 val gbMet = "Archery GB (Metric)"
 
-                // ID 17: Metric I (144 arrows)
+                // ID 17: Metric I
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (17, 'Metric I', '$gbMet', 'METRIC_10_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (17, 1, 70, 'METERS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (17, 2, 60, 'METERS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (17, 3, 50, 'METERS', 6, 6, 'CM_80')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (17, 4, 30, 'METERS', 6, 6, 'CM_80')")
 
-                // ID 18: Metric II (144 arrows)
+                // ID 18: Metric II
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (18, 'Metric II', '$gbMet', 'METRIC_10_ZONE', 'TARGET', 0)")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (18, 1, 60, 'METERS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (18, 2, 50, 'METERS', 6, 6, 'CM_122')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (18, 3, 40, 'METERS', 6, 6, 'CM_80')")
                 db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (18, 4, 30, 'METERS', 6, 6, 'CM_80')")
 
+                // ID 25: Short Metric
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (25, 'Short Metric', '$gbMet', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (25, 1, 50, 'METERS', 6, 6, 'CM_80')")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (25, 2, 30, 'METERS', 6, 6, 'CM_80')")
+
                 // ==========================================
                 // 5. NFAA / USA ARCHERY
                 // ==========================================
                 val usa = "NFAA / USA Archery"
 
-                // ID 19: Vegas 300 (Recurve/Compound)
+                // ID 19: Vegas 300
                 db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (19, 'Vegas 300', '$usa', 'METRIC_10_ZONE', 'TARGET', 0)")
-                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (19, 1, 18, 'METERS', 3, 10, 'CM_40_TRIPLE')") // Technically 18m or 20yd depending on the hall, standard Vegas face
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (19, 1, 18, 'METERS', 3, 10, 'CM_40_TRIPLE')")
 
-                // ID 20: WA 18m (Recurve - Triple Spot)
-                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (20, 'WA 18m (Recurve - Triple Spot)', '$waIn', 'METRIC_10_ZONE', 'TARGET', 0)")
-                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (20, 1, 18, 'METERS', 3, 20, 'CM_40_TRIPLE')")
+                // ID 26: NFAA Indoor 300
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (26, 'NFAA Indoor 300', '$usa', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (26, 1, 18, 'METERS', 5, 12, 'CM_40')")
+
+                // ID 27: 30m Practice (36 Arrows)
+                db.execSQL("INSERT INTO rounds (id, name, category, scoringMethod, shootingType, isCustom) VALUES (27, '30m Practice (36 Arrows)', 'Practice', 'METRIC_10_ZONE', 'TARGET', 0)")
+                db.execSQL("INSERT INTO distances (roundId, sequenceOrder, distanceValue, distanceUnit, arrowsPerEnd, numberOfEnds, targetFaceSize) VALUES (27, 1, 30, 'METERS', 6, 6, 'CM_80')")
             }
         }
     }

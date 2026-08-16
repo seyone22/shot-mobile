@@ -18,6 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 
+import androidx.compose.ui.res.stringResource
+import com.seyone22.shot.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhatsNewScreen(onNavigateBack: () -> Unit) {
@@ -39,10 +42,15 @@ fun WhatsNewScreen(onNavigateBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item {
-                VersionHeader("0.1.0", "The Foundation Update")
-                BulletPoint("Core Scoring Engine", "Support for WA, Archery GB, and NFAA rounds[cite: 12].")
-                BulletPoint("Equipment Lifecycle", "Track arrow shot counts and fatigue[cite: 17].")
-                BulletPoint("Location Management", "Save your favorite clubs and ranges.")
+                VersionHeader(
+                    version = stringResource(R.string.app_version_name),
+                    name = stringResource(R.string.app_release_title)
+                )
+                BulletPoint("Sight Marks & Trajectory Interpolation", "Comprehensive sight mark management with quadratic curve fitting, draw weight scaling, and range lookup card.")
+                BulletPoint("Android Homescreen Widgets", "Quick Start and Live Archery Stats phone widgets with 1-tap app launch.")
+                BulletPoint("App Launcher Shortcuts", "Long-press app icon shortcuts for Quick Start, Sight Marks, and Data Backup.")
+                BulletPoint("Default Round Settings", "Set your preferred competition round pre-selected for new sessions.")
+                BulletPoint("Core Scoring Engine", "Support for WA, Archery GB, and NFAA standard and custom rounds.")
             }
         }
     }

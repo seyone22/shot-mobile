@@ -22,6 +22,11 @@ import dev.seyone.core.domain.repository.RoundRepository
 import dev.seyone.core.domain.repository.ScoringRepository
 import dev.seyone.core.domain.repository.SessionRepository
 
+import dev.seyone.core.data.repository.LocalSightMarkRepository
+import dev.seyone.core.domain.repository.SightMarkRepository
+import dev.seyone.core.data.repository.BackupRepository
+import dev.seyone.core.data.repository.SettingsRepository
+
 interface AppContainer {
     val sessionRepository: SessionRepository
     val roundRepository: RoundRepository
@@ -31,6 +36,9 @@ interface AppContainer {
     val locationRepository: LocationRepository
     val arrowSetRepository: ArrowSetRepository
     val bowComponentRepository: BowComponentRepository
+    val sightMarkRepository: SightMarkRepository
+    val backupRepository: BackupRepository
+    val settingsRepository: SettingsRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -70,5 +78,17 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val bowComponentRepository: BowComponentRepository by lazy {
         OfflineBowComponentRepository(database.bowComponentDao())
+    }
+
+    override val sightMarkRepository: SightMarkRepository by lazy {
+        LocalSightMarkRepository(database.sightMarkDao())
+    }
+
+    override val backupRepository: BackupRepository by lazy {
+        BackupRepository(database)
+    }
+
+    override val settingsRepository: SettingsRepository by lazy {
+        SettingsRepository(context)
     }
 }
