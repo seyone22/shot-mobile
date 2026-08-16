@@ -84,12 +84,11 @@ fun ActiveSessionPagerScreen(viewModel: ShotScreenViewModel, onNavigateBack: () 
                 }
             }
 
-            // Moved up to prevent overlapping with the EdgeButton
             HorizontalPageIndicator(
                 pagerState = pagerState,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 72.dp)
+                    .align(Alignment.TopCenter)
+                    .padding(top = 22.dp)
             )
         }
     }

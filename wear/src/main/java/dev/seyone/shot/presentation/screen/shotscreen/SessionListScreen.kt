@@ -37,8 +37,8 @@ fun SessionListScreen(onSessionSelected: (Session) -> Unit) {
         timestamp = System.currentTimeMillis()
     )
 
-    ScreenScaffold(scrollState = columnState) {
-        ScalingLazyColumn(state = columnState) {
+    ScreenScaffold {
+        ScalingLazyColumn(state = columnState, modifier = Modifier.fillMaxWidth()) {
             item { Text(text = "Recent Sessions") }
 
             item {
