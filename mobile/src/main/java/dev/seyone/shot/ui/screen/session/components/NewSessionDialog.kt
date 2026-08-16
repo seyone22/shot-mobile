@@ -26,8 +26,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -81,7 +85,8 @@ fun NewSessionDialog(
         bowName: String,
         locationName: String,
         archerName: String,
-        arrowName: String
+        arrowName: String,
+        timestamp: Long
     ) -> Unit
 ) {
     if (LocalInspectionMode.current) {
@@ -160,7 +165,8 @@ fun NewSessionDialogContent(
         bowName: String,
         locationName: String,
         archerName: String,
-        arrowName: String
+        arrowName: String,
+        timestamp: Long
     ) -> Unit
 ) {
     // Dynamic rounds list state to support on-the-fly custom round creation
@@ -197,6 +203,8 @@ fun NewSessionDialogContent(
     var inputMethod by remember(initialSession) { mutableStateOf(initialSession?.inputMethod ?: InputMethod.ARROW_VALUES) }
     var numberOfArchers by remember(initialSession) { mutableIntStateOf(initialSession?.numberOfArchers ?: 1) }
     var arrowsPerEnd by remember(initialSession) { mutableIntStateOf(initialSession?.arrowsPerEnd ?: 6) }
+    var sessionTimestamp by remember(initialSession) { mutableLongStateOf(initialSession?.timestamp ?: System.currentTimeMillis()) }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
 
     val availableBows = remember(savedBows) {
         savedBows.map { it.name }
@@ -291,7 +299,8 @@ fun NewSessionDialogContent(
                                     selectedBow,
                                     selectedLocation,
                                     selectedArcher,
-                                    selectedArrowSet
+                                    selectedArrowSet,
+                                    sessionTimestamp
                                 )
                             }
                         },
@@ -327,7 +336,8 @@ fun NewSessionDialogContent(
                             selectedBow,
                             selectedLocation,
                             selectedArcher,
-                            selectedArrowSet
+                            selectedArrowSet,
+                            sessionTimestamp
                         )
                     }
                 },
@@ -553,6 +563,22 @@ fun NewSessionDialogContent(
                     if (isAdvancedExpanded) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
+                        val dateFormatter = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
+                        OutlinedTextField(
+                            value = dateFormatter.format(Date(sessionTimestamp)),
+                            onValueChange = { },
+                            readOnly = true,
+                            label = { Text("Session Date") },
+                            trailingIcon = {
+                                IconButton(onClick = { showDatePickerDialog = true }) {
+                                    Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDatePickerDialog = true }
+                        )
+
                         OutlinedTextField(
                             value = sessionName,
                             onValueChange = { sessionName = it },
@@ -620,6 +646,34 @@ fun NewSessionDialogContent(
 
             // Extra whitespace padding at bottom so FAB never obscures interactive elements when scrolled
             Spacer(modifier = Modifier.height(100.dp))
+        }
+    }
+
+    if (showDatePickerDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = sessionTimestamp
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selected ->
+                            sessionTimestamp = selected
+                        }
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePickerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 
@@ -1384,7 +1438,7 @@ fun NewSessionDialogPreview() {
         NewSessionDialogContent(
             rounds = sampleRounds,
             onDismiss = {},
-            onStartSession = { _, _, _, _, _, _, _, _, _, _ -> }
+            onStartSession = { _, _, _, _, _, _, _, _, _, _, _ -> }
         )
     }
 }

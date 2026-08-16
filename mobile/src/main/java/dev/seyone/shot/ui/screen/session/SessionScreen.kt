@@ -232,10 +232,13 @@ fun SessionScreen(
                 onSaveArcher = { viewModel.saveArcher(it) },
                 onSaveArrowSet = { viewModel.saveArrowSet(it) },
                 onDismiss = { showNewSessionSheet = false },
-                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName ->
+                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName, timestamp ->
                     showNewSessionSheet = false
                     viewModel.startNewSession(
-                        roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName
+                        roundId = roundId, sessionType = type, inputMethod = method,
+                        numberOfArchers = archers, arrowsPerEnd = arrows, sessionName = sessionName,
+                        bowName = bowName, locationName = locationName, archerName = archerName, arrowName = arrowName,
+                        timestamp = timestamp
                     ) { newSessionId ->
                         onNavigateToScoring(newSessionId)
                     }
@@ -256,7 +259,7 @@ fun SessionScreen(
                 onSaveArrowSet = { viewModel.saveArrowSet(it) },
                 initialSession = sessionToEdit,
                 onDismiss = { editingSession = null },
-                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName ->
+                onStartSession = { roundId, type, method, archers, arrows, sessionName, bowName, locationName, archerName, arrowName, timestamp ->
                     viewModel.updateSessionDetails(
                         existingSession = sessionToEdit,
                         newRoundId = roundId,
@@ -269,6 +272,7 @@ fun SessionScreen(
                         newLocationName = locationName,
                         newArcherName = archerName,
                         newArrowName = arrowName,
+                        newTimestamp = timestamp,
                         onComplete = {
                             editingSession = null
                         }

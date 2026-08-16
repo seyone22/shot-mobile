@@ -168,6 +168,7 @@ class SessionViewModel(
         roundId: Long, sessionType: SessionType, inputMethod: InputMethod,
         numberOfArchers: Int, arrowsPerEnd: Int, sessionName: String = "",
         bowName: String = "", locationName: String = "", archerName: String = "", arrowName: String = "",
+        timestamp: Long = System.currentTimeMillis(),
         onSessionCreated: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -185,7 +186,7 @@ class SessionViewModel(
                 numberOfArchers = numberOfArchers, arrowsPerEnd = arrowsPerEnd,
                 notes = sessionName,
                 archerId = matchingArcherId, bowId = matchingBowId, arrowId = matchingArrowId, locationId = matchingLocationId,
-                timestamp = System.currentTimeMillis()
+                timestamp = timestamp
             )
             onSessionCreated(sessionRepository.insertSession(newSession))
         }
@@ -203,6 +204,7 @@ class SessionViewModel(
         newLocationName: String = "",
         newArcherName: String = "",
         newArrowName: String = "",
+        newTimestamp: Long = existingSession.timestamp,
         onComplete: () -> Unit
     ) {
         viewModelScope.launch {
@@ -237,7 +239,8 @@ class SessionViewModel(
                         archerId = matchingArcherId,
                         bowId = matchingBowId,
                         arrowId = matchingArrowId,
-                        locationId = matchingLocationId
+                        locationId = matchingLocationId,
+                        timestamp = newTimestamp
                     )
                     sessionRepository.updateSession(updatedSession)
 
