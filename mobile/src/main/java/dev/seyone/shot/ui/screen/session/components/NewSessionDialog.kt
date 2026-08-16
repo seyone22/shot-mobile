@@ -198,7 +198,8 @@ fun NewSessionDialogContent(
         }
     }
 
-    var sessionName by remember(initialSession) { mutableStateOf(initialSession?.notes ?: "") }
+    var sessionName by remember(initialSession) { mutableStateOf(initialSession?.name ?: "") }
+    var notes by remember(initialSession) { mutableStateOf(initialSession?.notes ?: "") }
     var sessionType by remember(initialSession) { mutableStateOf(initialSession?.sessionType ?: SessionType.PRACTICE) }
     var inputMethod by remember(initialSession) { mutableStateOf(initialSession?.inputMethod ?: InputMethod.ARROW_VALUES) }
     var numberOfArchers by remember(initialSession) { mutableIntStateOf(initialSession?.numberOfArchers ?: 1) }

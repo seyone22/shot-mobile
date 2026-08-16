@@ -35,6 +35,7 @@ data class Session(
     val inputMethod: InputMethod,
     val numberOfArchers: Int,
     val arrowsPerEnd: Int,
+    val name: String = "",
     val notes: String = "",
     val timestamp: Long,
 

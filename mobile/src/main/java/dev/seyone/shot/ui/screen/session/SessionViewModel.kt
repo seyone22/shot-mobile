@@ -169,6 +169,7 @@ class SessionViewModel(
         numberOfArchers: Int, arrowsPerEnd: Int, sessionName: String = "",
         bowName: String = "", locationName: String = "", archerName: String = "", arrowName: String = "",
         timestamp: Long = System.currentTimeMillis(),
+        notes: String = "",
         onSessionCreated: (Long) -> Unit
     ) {
         viewModelScope.launch {
@@ -184,7 +185,8 @@ class SessionViewModel(
             val newSession = Session(
                 roundId = roundId, sessionType = sessionType, inputMethod = inputMethod,
                 numberOfArchers = numberOfArchers, arrowsPerEnd = arrowsPerEnd,
-                notes = sessionName,
+                name = sessionName,
+                notes = notes,
                 archerId = matchingArcherId, bowId = matchingBowId, arrowId = matchingArrowId, locationId = matchingLocationId,
                 timestamp = timestamp
             )
@@ -205,6 +207,7 @@ class SessionViewModel(
         newArcherName: String = "",
         newArrowName: String = "",
         newTimestamp: Long = existingSession.timestamp,
+        newNotes: String = existingSession.notes,
         onComplete: () -> Unit
     ) {
         viewModelScope.launch {
@@ -235,7 +238,8 @@ class SessionViewModel(
                         inputMethod = newInputMethod,
                         numberOfArchers = newArchers,
                         arrowsPerEnd = newArrowsPerEnd,
-                        notes = newSessionName,
+                        name = newSessionName,
+                        notes = newNotes,
                         archerId = matchingArcherId,
                         bowId = matchingBowId,
                         arrowId = matchingArrowId,

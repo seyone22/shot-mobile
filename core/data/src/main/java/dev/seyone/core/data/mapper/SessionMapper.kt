@@ -15,6 +15,7 @@ fun SessionEntity.toDomainModel() = Session(
     inputMethod = inputMethod,
     numberOfArchers = numberOfArchers,
     arrowsPerEnd = arrowsPerEnd,
+    name = name,
     notes = notes,
     timestamp = timestamp
 )
@@ -30,6 +31,7 @@ fun Session.toEntity() = SessionEntity(
     inputMethod = inputMethod,
     numberOfArchers = numberOfArchers,
     arrowsPerEnd = arrowsPerEnd,
+    name = name,
     notes = notes,
     timestamp = timestamp
 )

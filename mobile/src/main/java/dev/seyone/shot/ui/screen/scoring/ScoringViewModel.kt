@@ -134,7 +134,7 @@ class ScoringViewModel(
                     _uiState.update { state ->
                         state.copy(
                             title = roundWithDistances.name,
-                            sessionName = session.notes,
+                            sessionName = session.name.ifBlank { session.notes },
                             archerName = primaryArcher?.name ?: "",
                             locationName = location?.name ?: "",
                             bowProfileName = bowProfile?.name ?: "",

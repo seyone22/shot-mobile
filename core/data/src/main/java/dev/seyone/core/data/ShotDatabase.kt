@@ -24,7 +24,7 @@ import dev.seyone.core.data.entity.*
         BowComponentEntity::class,
         SightMarkEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(ShotTypeConverters::class)
@@ -43,6 +43,20 @@ abstract class ShotDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var Instance: ShotDatabase? = null
+
+        // --- MIGRATION 12 to 13 ---
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 1. Add `name` column to sessions table
+                db.execSQL("ALTER TABLE `sessions` ADD COLUMN `name` TEXT NOT NULL DEFAULT ''")
+
+                // 2. Migrate existing session names stored in `notes` into `name` column
+                db.execSQL("UPDATE `sessions` SET `name` = `notes` WHERE `notes` IS NOT NULL AND `notes` != ''")
+
+                // 3. Clear legacy notes column so notes can be used for new session journaling/sight notes
+                db.execSQL("UPDATE `sessions` SET `notes` = '' WHERE `name` = `notes` AND `name` != ''")
+            }
+        }
 
         // --- MIGRATION 5 to 6 ---
         private val MIGRATION_5_6 = object : Migration(5, 6) {
@@ -202,7 +216,8 @@ abstract class ShotDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
-                        MIGRATION_11_12
+                        MIGRATION_11_12,
+                        MIGRATION_12_13
                     )
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabasePrepopulateCallback())

@@ -27,7 +27,8 @@ data class SessionEntity(
     val sessionType: SessionType,
     val inputMethod: InputMethod,
     val numberOfArchers: Int,
-    val arrowsPerEnd: Int, // <--- ADD THIS LINE
-    val notes: String = "", // <--- ADD THIS
-    val timestamp: Long = System.currentTimeMillis() // Standard way to store dates in Room
+    val arrowsPerEnd: Int,
+    val name: String = "",
+    val notes: String = "",
+    val timestamp: Long = System.currentTimeMillis()
 )
