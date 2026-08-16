@@ -66,5 +66,10 @@ The project follows a modern, reactive architecture to ensure sub-second latency
 4.  Configure your Neon DB and Cloudflare credentials in `local.properties`.
 
 
+## 📄 Legal & Policies
+
+- [Privacy Policy](PRIVACY_POLICY.md)
+- [Terms and Conditions](TERMS_AND_CONDITIONS.md)
+
 ## 📄 License
 This project is licensed under the PolyForm Noncommercial License.
