@@ -25,12 +25,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.pager.HorizontalPager
-import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.EdgeButton
-import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Picker
@@ -46,50 +43,58 @@ import androidx.compose.ui.input.pointer.pointerInput
 import dev.seyone.core.domain.InputMethod
 import dev.seyone.shot.presentation.screen.analysis.AnalysisPage
 
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+
 @Composable
 fun ActiveSessionPagerScreen(viewModel: ShotScreenViewModel, onNavigateBack: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 2 })
     val session = state.activeSession ?: return
+    val listState = rememberScalingLazyListState()
 
     ScreenScaffold {
-        Box(modifier = Modifier.fillMaxSize()) {
-            HorizontalPager(
-                state = pagerState, modifier = Modifier.fillMaxSize()
-            ) { page ->
-                when (page) {
-                    0 -> {
-                        if (session.inputMethod == InputMethod.ARROW_VALUES) { // Make sure this matches your Domain Enum
-                            NumericPickerScorer(
-                                currentArrowsCount = state.currentEndArrows.size,
-                                arrowsPerEnd = session.arrowsPerEnd,
-                                onArrowAdded = { score, isX -> viewModel.addArrow(score, isX) },
-                                onEndComplete = { viewModel.completeEnd() },
-                                onUndo = { viewModel.undoLastAction() })
-                        } else {
-                            TargetFaceScorer(
-                                currentArrowsCount = state.currentEndArrows.size,
-                                arrowsPerEnd = session.arrowsPerEnd,
-                                onArrowAdded = { score, x, y ->
-                                    viewModel.addArrow(
-                                        score, false, x, y
-                                    )
-                                },
-                                onEndComplete = { viewModel.completeEnd() },
-                                onUndo = { viewModel.undoLastAction() })
-                        }
+        ScalingLazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (session.inputMethod == InputMethod.ARROW_VALUES) {
+                        NumericPickerScorer(
+                            currentArrowsCount = state.currentEndArrows.size,
+                            arrowsPerEnd = session.arrowsPerEnd,
+                            onArrowAdded = { score, isX -> viewModel.addArrow(score, isX) },
+                            onEndComplete = { viewModel.completeEnd() },
+                            onUndo = { viewModel.undoLastAction() }
+                        )
+                    } else {
+                        TargetFaceScorer(
+                            currentArrowsCount = state.currentEndArrows.size,
+                            arrowsPerEnd = session.arrowsPerEnd,
+                            onArrowAdded = { score, x, y -> viewModel.addArrow(score, false, x, y) },
+                            onEndComplete = { viewModel.completeEnd() },
+                            onUndo = { viewModel.undoLastAction() }
+                        )
                     }
-
-                    1 -> AnalysisPage(state)
                 }
             }
 
-            HorizontalPageIndicator(
-                pagerState = pagerState,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 22.dp)
-            )
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnalysisPage(state)
+                }
+            }
         }
     }
 }
