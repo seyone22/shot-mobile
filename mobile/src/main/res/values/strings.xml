@@ -14,10 +14,10 @@
     <string name="shortcut_statistics_long">View Archery Statistics</string>
 
     <!-- Versioning & Release Metadata -->
-    <string name="app_version">1.1.0</string>
-    <string name="app_version_name">v1.1.0</string>
-    <string name="app_build_number">2</string>
-    <string name="app_release_date">August 16, 2026</string>
-    <string name="app_release_title">The Sight Marks &amp; Android Widgets Update</string>
-    <string name="app_version_full">Version 1.1.0 (Build 2) • Released August 16, 2026</string>
+    <string name="app_version">1.1.1</string>
+    <string name="app_version_name">v1.1.1</string>
+    <string name="app_build_number">4</string>
+    <string name="app_release_date">August 17, 2026</string>
+    <string name="app_release_title">The Sight Marks &amp; Wear OS Sync Update</string>
+    <string name="app_version_full">Version 1.1.1 (Build 4) • Released August 17, 2026</string>
 </resources>

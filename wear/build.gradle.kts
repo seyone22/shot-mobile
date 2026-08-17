@@ -11,8 +11,8 @@ android {
         applicationId = "dev.seyone.shot"
         minSdk = 30
         targetSdk = 36
-        versionCode = 20005
-        versionName = "1.1.0"
+        versionCode = 20006
+        versionName = "1.1.1"
     }
 
     buildTypes {
